@@ -1,0 +1,147 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Wed May  8 22:10:01 2019
+
+@author: chhab011
+"""
+
+import tensorflow as tf
+import cnn_input
+import cnn
+from T6_PSI_settings import T6_PSI_settings
+import time
+from tqdm import tqdm
+import os
+settings_obj = T6_PSI_settings()
+N_EPOCHS = settings_obj.N_EPOCHS
+SKIP_STEP = 10 * 512 / cnn.BATCH_SIZE
+SAVE_STEP = 30 * 512 / cnn.BATCH_SIZE
+save_model = True
+
+
+def train():
+    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+    #sess = tf.Session(config=tf.ConfigProto(log_device_placement=True))
+    #print "VERSION"
+    #tf.__version__sess = tf.Session(config=tf.ConfigProto(log_device_placement=True))
+    tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
+    tf.reset_default_graph()
+    #with tf.device("/gpu:0"):
+    sess = tf.Session(config=tf.ConfigProto(log_device_placement=True))
+    tf.__version__sess = tf.Session(config=tf.ConfigProto(log_device_placement=True))
+    with tf.Graph().as_default():
+        maps = tf.placeholder(tf.float32,
+                              [None, cnn_input.MAP_SIZE_1d],
+                              name="X_placeholder")
+        cong = tf.placeholder(tf.float32,
+                              [None, cnn_input.MAP_SIZE_1d],
+                              name="C_placeholder")
+        labels = tf.placeholder(tf.float32,
+                                [None, cnn_input.N_CLASSES],
+                                name="Y_placeholder")
+
+        global_step = tf.Variable(0,
+                                  dtype=tf.int32,
+                                  trainable=False,
+                                  name='global_step')
+
+        logits = cnn.inference(maps,cong)
+        loss = cnn.loss(logits, labels)
+        optimizer = cnn.train(loss, global_step)
+        accuracy = cnn.accuracy(logits, labels)
+
+        with tf.Session() as sess:
+            sess.run(tf.global_variables_initializer())
+            saver = tf.train.Saver()
+            start_time = time.time()
+            initial_step = global_step.eval()
+            start_read = time.time()
+            curr_train, curr_valid, curr_test, cong_train, cong_valid, cong_test,template_train, template_valid, template_test, num_train, num_valid, num_test = cnn_input.load_and_preprocess_data()
+            n_batches_train = int(num_train / cnn.BATCH_SIZE)
+            total_loss = 0.0
+            total_loss10 = 0.0
+            trn_btch_str = 0
+            trn_btch_end = trn_btch_str + cnn.BATCH_SIZE
+            epoch_num = 1
+            start_train = time.time()
+            correct_preds_train =0
+            for epcoh_num in tqdm(range(N_EPOCHS),desc='EPOCH NUM', total=N_EPOCHS):
+                for trn_bat in range(0, n_batches_train ):
+                    index = initial_step+epoch_num*n_batches_train+trn_bat
+                    X_batch = curr_train[trn_btch_str:trn_btch_end, :]
+                    C_batch = cong_train[trn_btch_str:trn_btch_end, :]
+                    Y_batch = template_train[trn_btch_str:trn_btch_end, :]
+                    correct_preds_batch,_, loss_batch = sess.run([accuracy,optimizer, loss],
+                                         feed_dict={
+                                             maps: X_batch,
+                                             cong: C_batch,
+                                             labels: Y_batch
+                                             })
+                    total_loss += loss_batch
+                    total_loss10 += loss_batch
+
+                    correct_preds_train = correct_preds_batch + correct_preds_train
+                    if (index + 1) % 10 == 0:
+                        print("epoch_num: %d elapsed_time = %f"%(int(index/n_batches_train) ,time.time()-start_time))
+                        print('Average loss at step {}: {:5.5f}'.format(
+                            index + 1, total_loss10 / 10))
+                        total_loss10 = 0.0
+                    if (index + 1) % SKIP_STEP == 0:
+                        print("epoch_num: %d elapsed_time = %f"%(int(index/n_batches_train) ,time.time()-start_time))
+                        print('Average loss at step {}: {:5.5f}'.format(
+                            index + 1, total_loss / SKIP_STEP))
+                        total_loss = 0.0
+                        train_acc = 100*correct_preds_train/(cnn.BATCH_SIZE*SKIP_STEP)
+                        correct_preds_train =0
+                        print("training Accuracy {0}".format(train_acc))
+
+                        X_batch = curr_valid[0:num_valid, :]
+                        C_batch = cong_valid[0:num_valid, :]
+
+                        Y_batch = template_valid[0:num_valid, :]
+                        correct_preds_batch, = sess.run([accuracy],
+                                                        feed_dict={
+                                                            maps: X_batch,
+                                                            cong: C_batch,
+                                                            labels: Y_batch
+                                                        })
+                        valid_acc = 100 * correct_preds_batch / num_valid
+                        print("Validation Accuracy {0}".format(valid_acc))
+
+                    if ((index + 1) % SAVE_STEP == 0 and save_model == True):
+                        print("SAVING CHECKPOINT")
+                        saver.save(sess, settings_obj.checkpoint_dir, index)
+                    trn_btch_str, trn_btch_end, epoch_num = get_next_batch(
+                        trn_btch_str, trn_btch_end, epoch_num, num_train)
+            print("Optimization Finished!")
+            print("SAVING CHECKPOINT")
+            saver.save(sess, settings_obj.checkpoint_dir, index)
+            X_batch = curr_test[0:num_test, :]
+            C_batch = cong_test[0:num_test, :]
+            Y_batch = template_test[0:num_test, :]
+            correct_preds_batch, = sess.run([accuracy],
+                                            feed_dict={
+                                                maps: X_batch,
+                                                cong: C_batch,
+                                                labels: Y_batch
+                                            })
+            test_acc = 100 * correct_preds_batch / num_test
+            print("Test Accuracy {0}".format(test_acc))
+
+
+
+def get_next_batch(trn_btch_str, trn_btch_end, epoch_num, num_train):
+    trn_btch_str = trn_btch_end - 1
+    trn_btch_end = trn_btch_str + cnn.BATCH_SIZE
+    if trn_btch_end > num_train:
+        trn_btch_str = 0
+        trn_btch_end = trn_btch_str + cnn.BATCH_SIZE
+        epoch_num += 1
+        if epoch_num % 5 == 0:
+            epoch_num += 5
+    return trn_btch_str, trn_btch_end, epoch_num
+
+
+if __name__ == "__main__":
+    train()

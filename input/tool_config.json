@@ -1,0 +1,16 @@
+{
+    "num_vdd_per_region": 1	,
+    "current_map_num_regions": 6,
+    "num_maps": 40,
+    "start_maps": 1	,
+    "num_parallel_runs": 20  ,
+    "num_per_run": 1  ,
+    "validation_percent": 10  ,
+    "test_percent": 10  ,
+    "current_scaling": 2,
+    "N_EPOCHS": 20,
+    "step_size": 1e-7,
+    "current_unit": 1e-3,
+    "max_current": 3.1396e-6
+
+}

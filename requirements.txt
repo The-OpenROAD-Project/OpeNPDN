@@ -1,0 +1,12 @@
+# The following prerequisites are needed to run the flow:
+# python 3.6 and pip 18.1
+# The following packages will be installed in the virtual environment using pip install -r requirements.txt
+# Recommended OS: Red Hat Enteprise Linux 8 or Ubuntu 16.04
+numpy
+scipy
+matplotlib
+tensorflow
+pprint
+pandas
+tqdm
+pytest

@@ -1,0 +1,8 @@
+Instance: fifo
+Cell: NAND2
+Liberty file: lib_file.lib 
+Internal power: 0.00002765mW
+Switching power: 0.00003674mW
+Leakage power: 0.00000000mW;
+Total power: 0.00006440mW;
+
