@@ -125,9 +125,7 @@ train:
 
 inference:
 	mkdir -p work
-	$(PC) ./src/current_map_generator.py ${DEF_FILE} ${LEF_FILE} ${POW_FILE} ${CONGEST_RPT}
-	$(PC) ./src/cnn_inference.py
-	$(PC) ./src/IR_map_generator.py
+	$(PC) ./src/current_map_generator.py ${DEF_FILE} ${LEF_FILE} ${POW_FILE} ${CONGEST_RPT} && $(PC) ./src/cnn_inference.py && $(PC) ./src/IR_map_generator.py
 
 get_ir:
 	mkdir -p work

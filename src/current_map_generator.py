@@ -95,7 +95,7 @@ def read_def(def_file):
                     print("ERROR: Area obtained from the DEF does not match the \
                     template definition json file. Ensure the region sizes and \
                     number of regions are defined appropriately")
-                    exit()
+                    exit(-1)
                     
             count += 1
             if re.match(r'^[\t ]*COMPONENTS \d+', line, flags=re.IGNORECASE):
@@ -275,7 +275,7 @@ def main():
         print(
             "Enter the full path names of the DEF, LEF and power report files")
         print(" Format resolution_mapping.py <def_file> <\"lef_file1 lef_file2\"> <power_rpt>")
-        sys.exit()
+        sys.exit(-1)
 
     def_file = sys.argv[1]
     lef_files = sys.argv[2]
@@ -283,18 +283,18 @@ def main():
     congest_file = sys.argv[4]
     if not os.path.isfile(def_file):
         print("ERROR unable to find " + def_file)
-        sys.exit()
+        sys.exit(-1)
     lef_files = lef_files.split();
     for i in range(len(lef_files)):
         if not os.path.isfile(lef_files[i]):
             print("ERROR unable to find " + lef_files[i])
-            sys.exit()
+            sys.exit(-1)
     if not os.path.isfile(power_file):
         print("ERROR unable to find " + power_file)
-        sys.exit()
+        sys.exit(-1)
     if not os.path.isfile(congest_file):
         print("ERROR unable to find " + congest_file)
-        sys.exit()
+        sys.exit(-1)
 
     cell_data = create_cell_data(def_file, lef_files, power_file)
     power_map = create_power_map(cell_data)
