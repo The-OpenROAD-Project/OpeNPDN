@@ -9,8 +9,12 @@ import numpy as np
 
 #os.system('cat input/current_maps/current_maps.* > input/current_maps/current_maps_merged.zip')
 #os.system('unzip -q input/current_maps/current_maps_merged.zip ')
+print("Unpacking the current_maps")
+os.system('cat input/current_maps/current_maps.tgz_part* | tar -xzvf - && rm input/current_maps/current_maps.tgz_part*')
 #os.system('cat output/CNN_data.z* > output/CNN_data_merged.zip')
 #os.system('unzip -q output/CNN_data_merged.zip')
+print("Unpacking the training data")
+os.system('cat output/CNN_data.tgz_part* | tar -xzvf - && rm output/CNN_data.tgz_part*')
 #os.system('cat output/checkpoints/checkpoints.z* > output/checkpoints/checkpoints_merged.zip')
 #os.system('unzip -q output/checkpoints/checkpoints_merged.zip')
 #os.remove('input/current_maps/current_maps_merged.zip')    

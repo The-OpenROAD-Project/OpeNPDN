@@ -13,7 +13,3 @@ PDN-opt
 !*_Nangate45.pwr.rpt
 *.congest.rpt
 !*_Nangate45.congest.rpt
-CNN_train_*.csv
-CNN_test_*.csv
-CNN_val_*.csv
-input/current_maps/*
