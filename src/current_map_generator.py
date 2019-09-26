@@ -270,7 +270,7 @@ def create_congest_map(congest_file,def_data):
 def main():
     settings_obj = T6_PSI_settings()
 
-    if len(sys.argv) != 5:
+    if len(sys.argv) != 5 and len(sys.argv) != 6 :
         print("ERROR Insufficient arguments")
         print(
             "Enter the full path names of the DEF, LEF and power report files")
@@ -281,6 +281,10 @@ def main():
     lef_files = sys.argv[2]
     power_file = sys.argv[3]
     congest_file = sys.argv[4]
+    if (len(sys.argv) == 6 and sys.argv[5] == "no_congestion"):
+        congestion_enabled =0 
+    else:
+        congestion_enabled =1 
     if not os.path.isfile(def_file):
         print("ERROR unable to find " + def_file)
         sys.exit(-1)
@@ -292,23 +296,26 @@ def main():
     if not os.path.isfile(power_file):
         print("ERROR unable to find " + power_file)
         sys.exit(-1)
-    if not os.path.isfile(congest_file):
-        print("ERROR unable to find " + congest_file)
-        sys.exit(-1)
+    if congestion_enabled == 1:
+        if not os.path.isfile(congest_file):
+            print("ERROR unable to find " + congest_file)
+            sys.exit(-1)
 
     cell_data = create_cell_data(def_file, lef_files, power_file)
     power_map = create_power_map(cell_data)
     power_map = power_map *100
     print("WARNING: currents are scaled internally by a factor of 100")
-    congest_map = create_congest_map(congest_file,cell_data)
+    if congestion_enabled == 1:
+        congest_map = create_congest_map(congest_file,cell_data)
     filtered_map = ndimage.uniform_filter(power_map, size=20, mode='mirror')
 
     with open(settings_obj.cur_map_process_file, 'wb') as outfile:
         np.savetxt(outfile, filtered_map, delimiter=',')
     with open(settings_obj.cur_map_file, 'wb') as outfile:
         np.savetxt(outfile, power_map, delimiter=',')
-    with open(settings_obj.cong_map_file, 'wb') as outfile:
-        np.savetxt(outfile, congest_map, delimiter=',')
+    if congestion_enabled == 1:
+        with open(settings_obj.cong_map_file, 'wb') as outfile:
+            np.savetxt(outfile, congest_map, delimiter=',')
 
 
 if __name__ == '__main__':

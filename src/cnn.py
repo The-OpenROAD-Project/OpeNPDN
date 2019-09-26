@@ -26,7 +26,7 @@ MOMEMTUM = 0.1
 DROPOUT = 0.75
 
 
-def inference(X,cong):
+def inference(X,cong,congestion_enabled):
     """ Performes the forward propagation in the CNN during training
     Args:
         X: This is the input to the CNN, current maps in our case
@@ -43,15 +43,22 @@ def inference(X,cong):
                                 -1, cnn_input.MAP_SIZE_X,
                                 cnn_input.MAP_SIZE_Y, 1
                             ])
-        cong_in =  tf.reshape(cong,
+        if(congestion_enabled ==1):
+            cong_in =  tf.reshape(cong,
                             shape=[
                                 -1, cnn_input.MAP_SIZE_X,
                                 cnn_input.MAP_SIZE_Y, 1
                             ])
-        images = tf.concat([images_in,cong_in],3)
-        kernels = tf.get_variable('kernels',
+            images = tf.concat([images_in,cong_in],3)
+            kernels = tf.get_variable('kernels',
                                   shape=([5, 5, 2, 32]),
                                   initializer=tf.truncated_normal_initializer())
+        else:
+            images = images_in
+            kernels = tf.get_variable('kernels',
+                                  shape=([5, 5, 1, 32]),
+                                  initializer=tf.truncated_normal_initializer())
+            
         biases = tf.get_variable('biases',
                                  shape=([32]),
                                  initializer=tf.constant_initializer(0.0))

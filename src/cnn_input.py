@@ -33,8 +33,11 @@ size_region_y = int(settings_obj.LENGTH_REGION * 1e6)
 MAP_SIZE_1d = MAP_SIZE_X*MAP_SIZE_Y
 
 
-
-def load_and_preprocess_data():
+def load_and_preprocess_data(congestion_enabled):
+    if congestion_enabled ==1:
+       normalization_file = settings_obj.checkpoint_dir+settings_obj.normalization_file
+    else:
+       normalization_file = settings_obj.checkpoint_dir_wo_cong+settings_obj.normalization_file
     print("Preprocessing the input data")
     curr_train = np.array(
         pd.read_csv("output/CNN_train_currents.csv", header=None).values)
@@ -42,21 +45,27 @@ def load_and_preprocess_data():
         pd.read_csv("output/CNN_val_currents.csv", header=None).values)
     curr_test = np.array(
         pd.read_csv("output/CNN_test_currents.csv", header=None).values)
-    pre_cong_train = np.array(
-        pd.read_csv("output/CNN_train_congest.csv", header=None).values)
-    pre_cong_valid = np.array(
-        pd.read_csv("output/CNN_val_congest.csv", header=None).values)
-    pre_cong_test = np.array(
-        pd.read_csv("output/CNN_test_congest.csv", header=None).values)
+    if(congestion_enabled == 1):
+        pre_cong_train = np.array(
+            pd.read_csv("output/CNN_train_congest.csv", header=None).values)
+        pre_cong_valid = np.array(
+            pd.read_csv("output/CNN_val_congest.csv", header=None).values)
+        pre_cong_test = np.array(
+            pd.read_csv("output/CNN_test_congest.csv", header=None).values)
 
     print("Preprocessing: data loaded")
     #normalizing paramters
     min_cur = np.amin(curr_train)
     max_cur = np.amax(curr_train)
     scl_cur = 1 / (max_cur - min_cur)
-    min_cong = np.amin(pre_cong_train)
-    max_cong = np.amax(pre_cong_train)
-    scl_cong = 1 / (max_cong - min_cong)
+    if(congestion_enabled == 1):
+        min_cong = np.amin(pre_cong_train)
+        max_cong = np.amax(pre_cong_train)
+        scl_cong = 1 / (max_cong - min_cong)
+    else:
+        min_cong = 0
+        max_cong = 1
+        scl_cong = 0
     #print("SCALING FACTORS\n")
     #print("min %e\n" % min_cur)
     #print("max %e\n" % max_cur)
@@ -68,57 +77,61 @@ def load_and_preprocess_data():
     normalization['congestion']['max'] = max_cong
     normalization['congestion']['min'] = min_cong
     print("Preprocessing: normalization parameters calculated and saved")
-    with open(settings_obj.normalization_file, 'w') as outfile:
+    with open(normalization_file, 'w') as outfile:
         json.dump(normalization, outfile, indent=4)
 
     curr_train = (curr_train - min_cur) * scl_cur
     curr_valid = (curr_valid - min_cur) * scl_cur
     curr_test = (curr_test - min_cur) * scl_cur
     print("Preprocessing: currents_normalized")
-    pre_cong_train = (pre_cong_train - min_cong) * scl_cong
-    pre_cong_valid = (pre_cong_valid - min_cong) * scl_cong
-    pre_cong_test =  (pre_cong_test -  min_cong) * scl_cong
+    if(congestion_enabled == 1):
+        pre_cong_train = (pre_cong_train - min_cong) * scl_cong
+        pre_cong_valid = (pre_cong_valid - min_cong) * scl_cong
+        pre_cong_test =  (pre_cong_test -  min_cong) * scl_cong
 
-    print("Preprocessing: congestion_normalized")
-    cong_train = np.zeros((curr_train.shape[0],curr_train.shape[1]))
-    for i,cong in enumerate(pre_cong_train):
-        cong_map = np.zeros((MAP_SIZE_X,MAP_SIZE_Y))
-        for n,c in enumerate(cong):
-            x  = n % num_map_1d
-            y  = int(n / num_map_1d)
-            x_str = x*size_region_x
-            x_stp = (x+1)*size_region_x
-            y_str = y*size_region_y
-            y_stp = (y+1)*size_region_y
-            cong_map[x_str:x_stp,y_str:y_stp] = c*np.ones((size_region_x,size_region_y))
-        cong_train[i,:] = cong_map.reshape(-1)
-    cong_valid = np.zeros((curr_valid.shape[0],curr_valid.shape[1]))
-    for i,cong in enumerate(pre_cong_valid):
-        cong_map = np.zeros((MAP_SIZE_X,MAP_SIZE_Y))
-        for n,c in enumerate(cong):
-            x  = n % num_map_1d
-            y  = int(n / num_map_1d)
-            x_str = x*size_region_x
-            x_stp = (x+1)*size_region_x
-            y_str = y*size_region_y
-            y_stp = (y+1)*size_region_y
-            cong_map[x_str:x_stp,y_str:y_stp] = c*np.ones((size_region_x,size_region_y))
-        cong_valid[i,:] = cong_map.reshape(-1)
-    cong_test = np.zeros((curr_test.shape[0],curr_test.shape[1]))
-    for i,cong in enumerate(pre_cong_test):
-        cong_map = np.zeros((MAP_SIZE_X,MAP_SIZE_Y))
-        for n,c in enumerate(cong):
-            x  = n % num_map_1d
-            y  = int(n / num_map_1d)
-            x_str = x*size_region_x
-            x_stp = (x+1)*size_region_x
-            y_str = y*size_region_y
-            y_stp = (y+1)*size_region_y
-            cong_map[x_str:x_stp,y_str:y_stp] = c*np.ones((size_region_x,size_region_y))
-        cong_test[i,:] = cong_map.reshape(-1)
+        print("Preprocessing: congestion_normalized")
+        cong_train = np.zeros((curr_train.shape[0],curr_train.shape[1]))
+        for i,cong in enumerate(pre_cong_train):
+            cong_map = np.zeros((MAP_SIZE_X,MAP_SIZE_Y))
+            for n,c in enumerate(cong):
+                x  = n % num_map_1d
+                y  = int(n / num_map_1d)
+                x_str = x*size_region_x
+                x_stp = (x+1)*size_region_x
+                y_str = y*size_region_y
+                y_stp = (y+1)*size_region_y
+                cong_map[x_str:x_stp,y_str:y_stp] = c*np.ones((size_region_x,size_region_y))
+            cong_train[i,:] = cong_map.reshape(-1)
+        cong_valid = np.zeros((curr_valid.shape[0],curr_valid.shape[1]))
+        for i,cong in enumerate(pre_cong_valid):
+            cong_map = np.zeros((MAP_SIZE_X,MAP_SIZE_Y))
+            for n,c in enumerate(cong):
+                x  = n % num_map_1d
+                y  = int(n / num_map_1d)
+                x_str = x*size_region_x
+                x_stp = (x+1)*size_region_x
+                y_str = y*size_region_y
+                y_stp = (y+1)*size_region_y
+                cong_map[x_str:x_stp,y_str:y_stp] = c*np.ones((size_region_x,size_region_y))
+            cong_valid[i,:] = cong_map.reshape(-1)
+        cong_test = np.zeros((curr_test.shape[0],curr_test.shape[1]))
+        for i,cong in enumerate(pre_cong_test):
+            cong_map = np.zeros((MAP_SIZE_X,MAP_SIZE_Y))
+            for n,c in enumerate(cong):
+                x  = n % num_map_1d
+                y  = int(n / num_map_1d)
+                x_str = x*size_region_x
+                x_stp = (x+1)*size_region_x
+                y_str = y*size_region_y
+                y_stp = (y+1)*size_region_y
+                cong_map[x_str:x_stp,y_str:y_stp] = c*np.ones((size_region_x,size_region_y))
+            cong_test[i,:] = cong_map.reshape(-1)
             
-    print("Preprocessing: congestion_processed")
-        
+        print("Preprocessing: congestion_processed")
+    else:
+        cong_train =0 
+        cong_test =0 
+        cong_valid =0
 
     indices_train = pd.read_csv("output/CNN_train_template.csv",
                                 header=None).values
@@ -140,17 +153,22 @@ def load_and_preprocess_data():
     num_train_cur = curr_train.shape[0]
     num_valid_cur = curr_valid.shape[0]
     num_test_cur = curr_test.shape[0]
-    num_train_cong = cong_train.shape[0]
-    num_valid_cong = cong_valid.shape[0]
-    num_test_cong =  cong_test.shape[0]
-    if (num_train_cur == num_train_cong and num_valid_cur == num_valid_cong and
-    num_test_cur == num_test_cong):
+    if(congestion_enabled == 1):
+        num_train_cong = cong_train.shape[0]
+        num_valid_cong = cong_valid.shape[0]
+        num_test_cong =  cong_test.shape[0]
+        if (num_train_cur == num_train_cong and num_valid_cur == num_valid_cong and
+        num_test_cur == num_test_cong):
+            num_train = num_train_cur
+            num_valid = num_valid_cur
+            num_test = num_test_cur
+        else:
+            print("ERROR: Current and congestion input training data are not of the same size")
+            exit()
+    else:
         num_train = num_train_cur
         num_valid = num_valid_cur
         num_test = num_test_cur
-    else:
-        print("ERROR: Current and congestion input training data are not of the same size")
-        exit()
 
     print("Preprocessing: Completed")
     return curr_train, curr_valid, curr_test, cong_train, cong_valid, cong_test, \

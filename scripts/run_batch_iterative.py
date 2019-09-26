@@ -10,11 +10,20 @@ from T6_PSI_settings import T6_PSI_settings
 
 settings_obj = T6_PSI_settings();
 
+if len(sys.argv)>1 and sys.argv[1] == "no_congestion":
+    congestion_enabled = 0
+else:
+    congestion_enabled = 1
+
+
 num_of_parallel = settings_obj.num_parallel_runs
 num_of_maps_per_run = settings_obj.num_per_run
 start_value    = settings_obj.start_maps
 num_maps  = settings_obj.num_maps
-merge_file_prefix = "CNN_"
+if congestion_enabled ==1 :
+    merge_file_prefix = "CNN_"
+else:
+    merge_file_prefix = "CNN_wo_cong_"
 
 validation_percent  = settings_obj.validation_percent
 test_percent        = settings_obj.test_percent      
@@ -33,9 +42,15 @@ while map_proc < num_maps:
 
     if len(ps) < num_of_parallel :
         if  map_proc+num_of_maps_per_run < num_maps :
-            p=subprocess.Popen(["python3","src/generate_training_data.py","%d"%(map_proc+start_value),"%d"%(num_of_maps_per_run)])
+            if congestion_enabled ==1:
+                p=subprocess.Popen(["python3","src/generate_training_data.py","%d"%(map_proc+start_value),"%d"%(num_of_maps_per_run)])
+            else:
+                p=subprocess.Popen(["python3","src/generate_training_data.py","%d"%(map_proc+start_value),"%d"%(num_of_maps_per_run),"%s"%sys.argv[1]])
         else:
-            p=subprocess.Popen(["python3","src/generate_training_data.py","%d"%(map_proc+start_value),"%d"%(num_maps-map_proc)])
+            if congestion_enabled ==1:
+                p=subprocess.Popen(["python3","src/generate_training_data.py","%d"%(map_proc+start_value),"%d"%(num_maps-map_proc)])
+            else:
+                p=subprocess.Popen(["python3","src/generate_training_data.py","%d"%(map_proc+start_value),"%d"%(num_maps-map_proc),"%s"%sys.argv[1]])
         ps.append(p)
         map_proc = map_proc + num_of_maps_per_run
         print("Launching job %d"%n)
@@ -62,32 +77,37 @@ while map_proc <num_maps:
         current_csv_file = settings_obj.parallel_run_dir+"current_maps_%d_to_%d.csv"%(start_value+map_proc,start_value+num_maps-1)
     state = np.genfromtxt(state_csv_file, delimiter = ',')
     state= np.reshape(state,(-1,1))
-    congest = np.genfromtxt(congest_csv_file, delimiter = ',')
+    if congestion_enabled ==1:
+        congest = np.genfromtxt(congest_csv_file, delimiter = ',')
     currents = np.genfromtxt(current_csv_file, delimiter = ',')
 
     if(map_proc == 0):
         state_data = state 
-        congest_data = congest
         current_data = currents
+        if congestion_enabled ==1:
+            congest_data = congest
     else:
         state_data = np.vstack((state_data, state))
-        congest_data = np.vstack((congest_data, congest))
         current_data = np.vstack((current_data,currents))
+        if congestion_enabled ==1:
+            congest_data = np.vstack((congest_data, congest))
         
     map_proc = map_proc+num_of_maps_per_run
 with open( settings_obj.work_dir + 'work/'+merge_file_prefix+'state_%d_to_%d.csv' %(start_value, 
         start_value + num_maps - 1), 'wb') as outfile:
     np.savetxt(outfile,state_data, delimiter=',', fmt='%d')
-with open( settings_obj.work_dir + 'work/'+merge_file_prefix+'congest_%d_to_%d.csv' %(start_value, 
+if congestion_enabled ==1:
+    with open( settings_obj.work_dir + 'work/'+merge_file_prefix+'congest_%d_to_%d.csv' %(start_value, 
         start_value + num_maps - 1), 'wb') as outfile:
-    np.savetxt(outfile,congest_data, delimiter=',', fmt='%f')
+        np.savetxt(outfile,congest_data, delimiter=',', fmt='%f')
 
 print("Reading current maps")
 
 count = 0
 map_database        = np.array(current_data)
 template_database   = np.array(state_data)
-congest_database    = np.array(congest_data)
+if congestion_enabled ==1:
+    congest_database    = np.array(congest_data)
 #map_database        = np.zeros((current_map_num_regions*current_map_num_regions*num_maps,int(3*size_region_x)*int(3*size_region_y)))
 #template_database   = np.zeros((current_map_num_regions*current_map_num_regions*num_maps,1))
 #congest_database    = np.zeros((current_map_num_regions*current_map_num_regions*num_maps,9))
@@ -126,12 +146,14 @@ rest = ~ind
 
 val_currents = map_database[ind,:]
 val_template = template_database[ind,:]
-val_congest = congest_database[ind,:]
+if congestion_enabled ==1:
+    val_congest = congest_database[ind,:]
 
 map_database      = map_database[rest,:]
 template_database = template_database[rest,:]
-congest_database  = congest_database[rest,:]
 data_size         = template_database.shape[0]
+if congestion_enabled ==1:
+    congest_database  = congest_database[rest,:]
 
 choice = np.random.choice(range(data_size), size=(test_num,), replace=False)    
 ind = np.zeros(data_size, dtype=bool)
@@ -140,30 +162,33 @@ rest = ~ind
 
 test_currents = map_database[ind,:]
 test_template = template_database[ind,:]
-test_congest  = congest_database[ind,:]
+if congestion_enabled ==1:
+    test_congest  = congest_database[ind,:]
 
 train_currents = map_database[rest,:]
 train_template = template_database[rest,:]
-train_congest  = congest_database[rest,:]
+if congestion_enabled ==1:
+    train_congest  = congest_database[rest,:]
 
 with open(settings_obj.CNN_data_dir+merge_file_prefix+"val_currents.csv"  , 'wb') as outfile:
     np.savetxt(outfile,val_currents,delimiter=',',fmt='%4.3e')
 with open(settings_obj.CNN_data_dir+merge_file_prefix+"val_template.csv"  , 'wb') as outfile:
     np.savetxt(outfile,val_template,delimiter=',',fmt='%d')
-with open(settings_obj.CNN_data_dir+merge_file_prefix+"val_congest.csv"  , 'wb') as outfile:
-    np.savetxt(outfile,val_congest,delimiter=',',fmt='%f')
 with open(settings_obj.CNN_data_dir+merge_file_prefix+"test_currents.csv" , 'wb') as outfile:
     np.savetxt(outfile,test_currents,delimiter=',',fmt='%4.3e')
 with open(settings_obj.CNN_data_dir+merge_file_prefix+"test_template.csv" , 'wb') as outfile:
     np.savetxt(outfile,test_template,delimiter=',',fmt='%d')
-with open(settings_obj.CNN_data_dir+merge_file_prefix+"test_congest.csv"  , 'wb') as outfile:
-    np.savetxt(outfile,test_congest,delimiter=',',fmt='%f')
 with open(settings_obj.CNN_data_dir+merge_file_prefix+"train_currents.csv", 'wb') as outfile:
     np.savetxt(outfile,train_currents,delimiter=',',fmt='%4.3e')
 with open(settings_obj.CNN_data_dir+merge_file_prefix+"train_template.csv", 'wb') as outfile:
     np.savetxt(outfile,train_template,delimiter=',',fmt='%d')
-with open(settings_obj.CNN_data_dir+merge_file_prefix+"train_congest.csv"  , 'wb') as outfile:
-    np.savetxt(outfile,train_congest,delimiter=',',fmt='%f')
+if congestion_enabled ==1:
+    with open(settings_obj.CNN_data_dir+merge_file_prefix+"val_congest.csv"  , 'wb') as outfile:
+        np.savetxt(outfile,val_congest,delimiter=',',fmt='%f')
+    with open(settings_obj.CNN_data_dir+merge_file_prefix+"test_congest.csv"  , 'wb') as outfile:
+        np.savetxt(outfile,test_congest,delimiter=',',fmt='%f')
+    with open(settings_obj.CNN_data_dir+merge_file_prefix+"train_congest.csv"  , 'wb') as outfile:
+        np.savetxt(outfile,train_congest,delimiter=',',fmt='%f')
 
 
 

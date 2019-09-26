@@ -18,13 +18,24 @@ def main():
     # Read the json user input file and the current maps that need to be run
     # taken as an argument from the scripts
     settings_obj = T6_PSI_settings()
-    if len(sys.argv) != 3:
-        map_start = 1
-        num_maps = 15
-        print("Warning defaulting to %d %d" % (map_start, num_maps))
-    else:
+    if len(sys.argv) == 3:
         map_start = int(sys.argv[1])
         num_maps = int(sys.argv[2])
+        congestion_enabled = 1
+    elif len(sys.argv) == 4:
+        map_start = int(sys.argv[1])
+        num_maps = int(sys.argv[2])
+        if sys.argv[3] == "no_congestion":
+            congestion_enabled = 0
+        else:
+            congestion_enabled = 1 
+    else:
+        map_start = 1
+        num_maps = 15
+        congestion_enabled = 1 
+        print("Warning defaulting to %d %d and with congestion" % (map_start, num_maps))
+        print(sys.argv)
+
     # Initialize the SA parameters
     T_init = 70
     T_final = 0.0005
@@ -50,7 +61,10 @@ def main():
                 #region and neighbors
                 current_region = np.zeros((3*size_region_x,3*size_region_y))
                 init_state = np.zeros(9, int)
-                signal_cong = [0.3 + 0.7*random.uniform(0, 1) for _ in range(9) ]
+                if congestion_enabled == 1 :
+                    signal_cong = [0.3 + 0.7*random.uniform(0, 1) for _ in range(9) ]
+                else:
+                    signal_cong = [0 for _ in range(9) ]
                 if x == 0:
                     x_start = 0
                     x_end = x_start+2*size_region_x
@@ -128,10 +142,11 @@ def main():
             settings_obj.parallel_run_dir + 'energy_%d_to_%d.csv' %
         (map_start, map_start + num_maps - 1), 'w') as outfile:
         np.savetxt(outfile, e, delimiter=',', fmt='%f')
-    with open(
-            settings_obj.parallel_run_dir + 'congest_%d_to_%d.csv' %
-        (map_start, map_start + num_maps - 1), 'w') as outfile:
-        np.savetxt(outfile,congestion, delimiter=',', fmt='%f')
+    if congestion_enabled ==1:
+        with open(
+                settings_obj.parallel_run_dir + 'congest_%d_to_%d.csv' %
+            (map_start, map_start + num_maps - 1), 'w') as outfile:
+            np.savetxt(outfile,congestion, delimiter=',', fmt='%f')
     with open(
             settings_obj.parallel_run_dir + 'current_maps_%d_to_%d.csv' %
         (map_start, map_start + num_maps - 1), 'w') as outfile:

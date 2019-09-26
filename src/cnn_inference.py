@@ -15,28 +15,40 @@ import cnn
 from pprint import pprint
 from T6_PSI_settings import T6_PSI_settings
 import os
+import sys
 
 #TODO take in the settings file
-checkpoint_dir = './output/checkpoints/'
 power_map_file = "./work/current_map_processed.csv"
 cong_map_file = "./output/congestion_map.csv"
 #congestion_map_file = "./work/congestion_processed.csv"
 settings_obj = T6_PSI_settings()
 
+if (len(sys.argv)>1 and sys.argv[1] == "no_congestion"):
+    congestion_enabled = 0 
+else: 
+    congestion_enabled = 1 
+
+
+if congestion_enabled ==1:
+    checkpoint_dir = settings_obj.checkpoint_dir
+else:
+    checkpoint_dir = settings_obj.checkpoint_dir_wo_cong
+normalization_file = checkpoint_dir+settings_obj.normalization_file
 # Golden template numbers needed for comparison
 # This corresponds only to the first current map
 #indices = np.zeros((settings_obj.NUM_REGIONS_X * settings_obj.NUM_REGIONS_Y))
 test_size = settings_obj.NUM_REGIONS_X * settings_obj.NUM_REGIONS_Y
 # Hard coded after seeing training data, need to fix
-with open(settings_obj.normalization_file) as f:
+with open(normalization_file) as f:
     norm_data = json.load(f)
 min_cur = norm_data['currents']['min']
 max_cur = norm_data['currents']['max']
 scl_cur = 1 / (max_cur - min_cur)
 
-min_cong = norm_data['congestion']['min']
-max_cong = norm_data['congestion']['max']
-scl_cong = 1 / (max_cong - min_cong)
+if congestion_enabled == 1:
+    min_cong = norm_data['congestion']['min']
+    max_cong = norm_data['congestion']['max']
+    scl_cong = 1 / (max_cong - min_cong)
 
 template_map_file = "./output/template_map.txt"
 
@@ -50,7 +62,7 @@ def eval_once(currents_testcase, congestion_testcase, template_testcase):
         template_testcase: An array of the actual templates of the testcase
     """
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-    #tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
+    tf.logging.set_verbosity(tf.logging.ERROR)
     with tf.Graph().as_default():
         #with tf.name_scope('data'):
         maps = tf.placeholder(tf.float32,
@@ -59,10 +71,13 @@ def eval_once(currents_testcase, congestion_testcase, template_testcase):
         labels = tf.placeholder(tf.float32,
                                 [None, cnn_input.N_CLASSES],
                                 name="Y_placeholder")
-        cong = tf.placeholder(tf.float32,
+        if congestion_enabled == 1:
+            cong = tf.placeholder(tf.float32,
                               [None, cnn_input.MAP_SIZE_1d],
                               name="C_placeholder")
-        logits = cnn.inference(maps,cong)
+        else:
+            cong = tf.constant(0)
+        logits = cnn.inference(maps,cong,congestion_enabled)
         pred = cnn.prediction(logits)
         accuracy = cnn.accuracy(logits, labels)
         with tf.Session() as sess:
@@ -77,13 +92,20 @@ def eval_once(currents_testcase, congestion_testcase, template_testcase):
                 return
 
             X_batch = currents_testcase
-            C_batch = congestion_testcase
             Y_batch = template_testcase
+            if congestion_enabled == 1:
+                C_batch = congestion_testcase
             #TODO handle size mismatches
-            pred_acc,predict = sess.run([accuracy,pred],
+                pred_acc,predict = sess.run([accuracy,pred],
                                  feed_dict={
                                      maps: X_batch,
                                      cong: C_batch,
+                                     labels: Y_batch
+                                 })
+            else:
+                pred_acc,predict = sess.run([accuracy,pred],
+                                 feed_dict={
+                                     maps: X_batch,
                                      labels: Y_batch
                                  })
             #eval_acc = 100 * pred_acc / test_size
@@ -118,15 +140,17 @@ def process_testcase():
         (settings_obj.NUM_REGIONS_X * settings_obj.NUM_REGIONS_Y,
          3*3*size_region_x * size_region_y))
 #    cong_testcase = np.genfromtxt(congestion_map_file, delimiter=',')
-    cong_testcase = np.zeros((settings_obj.NUM_REGIONS_X * settings_obj.NUM_REGIONS_Y,3*3*size_region_x * size_region_y))
     currents = np.genfromtxt(power_map_file, delimiter=',')
-    congestion = np.genfromtxt(cong_map_file, delimiter=',')
+    if congestion_enabled == 1:
+        cong_testcase = np.zeros((settings_obj.NUM_REGIONS_X * settings_obj.NUM_REGIONS_Y,3*3*size_region_x * size_region_y))
+        congestion = np.genfromtxt(cong_map_file, delimiter=',')
     currents = (currents) / settings_obj.VDD
     n=0
     for y in range(settings_obj.NUM_REGIONS_Y):
         for x in range(settings_obj.NUM_REGIONS_X):
             current_region = np.zeros((3*size_region_x,3*size_region_y))
-            congestion_region = np.zeros((3*size_region_x,3*size_region_y))
+            if congestion_enabled == 1:
+                congestion_region = np.zeros((3*size_region_x,3*size_region_y))
 
             if  settings_obj.NUM_REGIONS_Y == 1:
                 y_start = 0 
@@ -171,12 +195,15 @@ def process_testcase():
 
             current_region[x_reg_start:x_reg_end,y_reg_start:y_reg_end] = (
                         currents[x_start:x_end,y_start:y_end])
-
-            congestion_region[x_reg_start:x_reg_end,y_reg_start:y_reg_end] = np.mean(
-                        congestion[x_start:x_end,y_start:y_end])
-            
             curr_testcase[n] = current_region.reshape(-1)*scl_cur
-            cong_testcase[n] = congestion_region.reshape(-1)*scl_cong
+
+            if congestion_enabled == 1:
+                congestion_region[x_reg_start:x_reg_end,y_reg_start:y_reg_end] = np.mean(
+                            congestion[x_start:x_end,y_start:y_end])
+                
+                cong_testcase[n] = congestion_region.reshape(-1)*scl_cong
+            else: 
+                cong_testcase = 0
             n =n +1
     template_testcase = np.zeros((test_size, cnn_input.N_CLASSES))
     #for n, c in enumerate(cnn_input.CLASSES):

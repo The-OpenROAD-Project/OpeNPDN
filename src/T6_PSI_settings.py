@@ -16,8 +16,10 @@ class T6_PSI_settings():
         self.map_dir = self.work_dir + "input/current_maps/"
         self.parallel_run_dir = self.work_dir + "work/parallel_runs/"
         self.CNN_data_dir =  self.work_dir + "output/"
-        self.checkpoint_dir = self.work_dir +'output/checkpoints/power_grid_ckpt'
-        self.normalization_file = self.work_dir + 'output/checkpoints/normalization.json'
+        self.checkpoint_dir = self.work_dir +'output/checkpoints/'
+        self.checkpoint_file = 'power_grid_ckpt'
+        self.normalization_file = 'normalization.json'
+        self.checkpoint_dir_wo_cong = self.work_dir +'output/checkpoints_wo_cong/'
 
         self.template_data = self.load_json(self.temp_json_file)
         self.config = self.load_json(self.conf_json_file)
