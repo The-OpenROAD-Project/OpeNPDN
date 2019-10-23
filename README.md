@@ -14,7 +14,7 @@ This problem is solved as a classification problem using a convolution neural ne
     * Placed DEF, path specified in the Makefile
     * Cell LEF, path specified in the Makefile
     * Instance based power report obtained from [OpenSTA](https://github.com/abk-openroad/OpenSTA) or Cadence Innovus Implementation System, path specified in the Makefile
-    * Congestion report obtained from Cadence Innovus Implementation System, path specified in the Makefile [optional]
+    * Congestion report in the format specified in *doc/congestion_format.txt* an example is shown in *doc/congestion_example.rpt*, path must be specified in the Makefile [optional]
 - Training data generation using simulated annealing
 - CNN training
 - Inference flow on a testcase

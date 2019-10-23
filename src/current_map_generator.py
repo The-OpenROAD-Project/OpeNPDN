@@ -2,6 +2,7 @@
 import re
 import sys
 import os
+import csv
 from scipy import ndimage
 import numpy as np
 from T6_PSI_settings import T6_PSI_settings
@@ -237,6 +238,43 @@ def create_power_map(cell_data):
     return power_map_um
 
 def create_congest_map(congest_file,def_data):
+    settings_obj = T6_PSI_settings()
+    print('Reading congestion report file')
+    congest_rep = {}
+    res = def_data['units_per_micron']
+    width = int(settings_obj.WIDTH_REGION*settings_obj.NUM_REGIONS_X*1e6)
+    height = int(settings_obj.LENGTH_REGION*settings_obj.NUM_REGIONS_Y*1e6)
+    congest_map = np.zeros((width * 10, height * 10))
+    
+    with open(congest_file) as f:
+        comp_key = ""
+        data = list(csv.reader(f))
+        seq = iter(data)
+        for row0 in seq:
+            row1 = next(seq)
+            # TODO works only with consequtive lines in the file. 
+            ll_x = min(int(row0[0]),int(row0[2]),int(row1[0]),int(row1[2]))
+            ll_y = min(int(row0[1]),int(row0[3]),int(row1[1]),int(row1[3]))
+            ur_x = max(int(row0[0]),int(row0[2]),int(row1[0]),int(row1[2]))
+            ur_y = max(int(row0[1]),int(row0[3]),int(row1[1]),int(row1[3]))
+            ll_x = int(10*ll_x / res)
+            ll_y = int(10*ll_y / res)
+            ur_x = int(10*ur_x / res)
+            ur_y = int(10*ur_y / res)
+            if( ll_x >0 and ll_y>0 and ur_x >0 and ur_y >0 ):
+                area = 100
+                usd = int(row0[4]) + int(row1[4])
+                tot = int(row0[5]) + int(row1[5])
+                cong = usd/tot
+                if cong <0 :
+                    cong = 0
+                congest_map[ll_x:ur_x, ll_y:ur_y] = congest_map[ll_x:ur_x,ll_y:ur_y] + cong/area
+    congest_map_um = congest_map.reshape(width, 10, height, 10).sum((1, 3))
+    return congest_map_um
+
+
+
+def create_congest_map_old(congest_file,def_data):
     settings_obj = T6_PSI_settings()
     print('Reading congestion report file')
     congest_rep = {}
