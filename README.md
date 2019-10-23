@@ -48,11 +48,12 @@ cd OpenROAD-PI
 make clean
 source install.sh
 make build
+make test
 ```
 
 The installation creates a virtual environment with the necessary packages needed to run the flow.
 
-The build unzips CNN checkpoint to run the inference flow on a testcase.
+The build unzips CNN checkpoint to run the inference flow on a testcase. The test runs a set of unit tests.
 
 
 ## Usage
