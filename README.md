@@ -1,12 +1,18 @@
 # OpeNPDN: Neural networks for automated synthesis of Power Delivery Networks (PDN)
 Machine learning-based on-chip power delivery network (PDN) synthesis at the placement stage.  The synthesis is based on a set of predefined, technology-specific set of templates. These templates are defined across multiple layers and vary in their metal utilizations in the intermediate layers. Dense templates are good for power integrity but bad for congestion. The problem of optimized PDN synthesis is converted into one of finding a template in every region on the tiling of a chip as shown in the figure below:
 
-![A template-based PDN with piecewise uniform pitches](https://github.com/VidyaChhabria/OpenROAD-PI/blob/master/doc/image.png)
+[![Standard](https://img.shields.io/badge/python-3.6-blue)](https://commons.wikimedia.org/wiki/File:Blue_Python_3.6_Shield_Badge.svg)
+[![Download](https://img.shields.io/badge/Download-here-red)](https://github.com/The-OpenROAD-Project/OpeNPDN/archive/master.zip)
+[![Version](https://img.shields.io/badge/version-0.1-green)](https://github.com/The-OpenROAD-Project/OpeNPDN/tree/master)
+[![AskMe](https://img.shields.io/badge/ask-me-yellow)](https://github.com/The-OpenROAD-Project/OpeNPDN/issues)
+[![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
+
+<img align = "right" width="40%" src="doc/image.png">
+<img align = "left" width="40%" src="doc/flow.png">
+
 
 This problem is solved as a classification problem using a convolution neural network (CNN). The computationally expensive cost of analyzing and optimizing the PDN is encapsulated into a one-time training step of the CNN. Using the trained CNN, for a specific PDK and region size, a correct-by-construction PDN can be quickly synthesized for any design as shown in the figure below:
 
-
-![PDN synthesis flow](https://github.com/VidyaChhabria/OpenROAD-PI/blob/master/doc/flow.png)
 
 ## Machine Learning Flow for PDN Synthesis
 - Input definition:
