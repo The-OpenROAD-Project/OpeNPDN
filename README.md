@@ -1,11 +1,11 @@
 # OpeNPDN: Neural networks for automated synthesis of Power Delivery Networks (PDN)
-Machine learning-based on-chip power delivery network (PDN) synthesis at the placement stage.  The synthesis is based on a set of predefined, technology-specific set of templates. These templates are defined across multiple layers and vary in their metal utilizations in the intermediate layers. Dense templates are good for power integrity but bad for congestion. The problem of optimized PDN synthesis is converted into one of finding a template in every region on the tiling of a chip as shown in the figure below:
-
 [![Standard](https://img.shields.io/badge/python-3.6-blue)](https://commons.wikimedia.org/wiki/File:Blue_Python_3.6_Shield_Badge.svg)
 [![Download](https://img.shields.io/badge/Download-here-red)](https://github.com/The-OpenROAD-Project/OpeNPDN/archive/master.zip)
 [![Version](https://img.shields.io/badge/version-0.1-green)](https://github.com/The-OpenROAD-Project/OpeNPDN/tree/master)
 [![AskMe](https://img.shields.io/badge/ask-me-yellow)](https://github.com/The-OpenROAD-Project/OpeNPDN/issues)
 [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
+
+Machine learning-based on-chip power delivery network (PDN) synthesis at the placement stage.  The synthesis is based on a set of predefined, technology-specific set of templates. These templates are defined across multiple layers and vary in their metal utilizations in the intermediate layers. Dense templates are good for power integrity but bad for congestion. The problem of optimized PDN synthesis is converted into one of finding a template in every region on the tiling of a chip as shown in the figure below:
 
 <img align = "right" width="50%" src="doc/image.png">
 <img align = "left" width="50%" src="doc/flow.png">
