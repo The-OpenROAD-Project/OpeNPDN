@@ -9,12 +9,10 @@ Machine learning-based on-chip power delivery network (PDN) synthesis at the pla
 
 <img align = "right" width="45%" src="doc/image.png">
 
-This problem is solved as a classification problem using a convolution neural network (CNN). The computationally expensive cost of analyzing and optimizing the PDN is encapsulated into a one-time training step of the CNN. Using the trained CNN, for a specific PDK and region size, a correct-by-construction PDN can be quickly synthesized for any design as shown in the figure below:
+This problem is solved as a classification problem using a convolution neural network (CNN). The computationally expensive cost of analyzing and optimizing the PDN is encapsulated into a one-time training step of the CNN. Using the trained CNN, for a specific PDK and region size, a correct-by-construction PDN can be quickly synthesized for any design as shown in the figure on the right:
 
 
 ## Machine Learning Flow for PDN Synthesis
-
-<img align = "right" width="50%" src="doc/flow.png">
 
 - Input definition:
     * PDN templates defined in the template_definition.json file (./input/template_definition.json)
@@ -32,6 +30,9 @@ This problem is solved as a classification problem using a convolution neural ne
     * IR_drop.rpt: A report which specifies the worst-case IR drop and if the predicted PDN meets IR drop specification. 
     * current_map.csv: A matrix of the current distribution obtained from the DEF and power report.
     * congestion_map.csv: A matrix of the congestion distribution obtained from the congestion report.
+
+<img align = "right" width="50%" src="doc/flow.png">
+
 
 The training data generation is a one-time step which involves running a simulated annealing based PDN optimization for multiple current maps.  This part of the flow needs to be run only **once** for a particular PDK and *region* size. Once the CNN has been trained for a given PDK, the *inference flow* can be run on any given design for the fixed *region* size. The region size is defined in the JSON file.  
 
