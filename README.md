@@ -7,8 +7,8 @@ Machine learning-based on-chip power delivery network (PDN) synthesis at the pla
 [![AskMe](https://img.shields.io/badge/ask-me-yellow)](https://github.com/The-OpenROAD-Project/OpeNPDN/issues)
 [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 
-<img align = "right" width="40%" src="doc/image.png">
-<img align = "left" width="40%" src="doc/flow.png">
+<img align = "right" width="50%" src="doc/image.png">
+<img align = "left" width="50%" src="doc/flow.png">
 
 
 This problem is solved as a classification problem using a convolution neural network (CNN). The computationally expensive cost of analyzing and optimizing the PDN is encapsulated into a one-time training step of the CNN. Using the trained CNN, for a specific PDK and region size, a correct-by-construction PDN can be quickly synthesized for any design as shown in the figure below:
