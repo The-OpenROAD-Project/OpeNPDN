@@ -14,7 +14,7 @@ This problem is solved as a classification problem using a convolution neural ne
 
 ## Machine Learning Flow for PDN Synthesis
 
-<img align = "left" width="50%" src="doc/flow.png">
+<img align = "right" width="50%" src="doc/flow.png">
 
 - Input definition:
     * PDN templates defined in the template_definition.json file (./input/template_definition.json)
