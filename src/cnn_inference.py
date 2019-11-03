@@ -145,11 +145,19 @@ def eval_once(currents_testcase, congestion_testcase, template_testcase):
             #pprint(predict)
             print("INFO: Saving optimized PDN in template_map.txt")
             region=0;
+            size_region_x = (settings_obj.WIDTH_REGION * 1e6)
+            size_region_y = (settings_obj.LENGTH_REGION * 1e6)
             with open(template_map_file,'w') as outfile:
                 for y in range(settings_obj.NUM_REGIONS_Y):
                     for x in range(settings_obj.NUM_REGIONS_X):
-                        outfile.write("Region x = %d y = %d, template = %d\n"%(
-                                x,y,predict[region]))
+                        x0 = x*size_region_x
+                        x1 = (x+1)*size_region_x
+                        y0 = y*size_region_y
+                        y1 = (y+1)*size_region_y
+                        #TODO update to real name
+                        template = predict[region]
+                        outfile.write("%5.1f %5.1f %5.1f %5.1f %d\n"%(
+                                x0,y0,x1,y1,template))
                         region = region+1
 
 

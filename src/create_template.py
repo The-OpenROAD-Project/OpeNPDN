@@ -128,20 +128,21 @@ def define_templates(settings_obj, generate_g):
             #        "ERROR: Layer %d does not have the corrent number of templates."
             #        % p, "Please check the template_definition.json file")
             #    sys.exit()
-    ranges = [range(len(pitches[x])) for x in template_layers]
-    template_num = 0
-    for pitch_idx in itertools.product(*ranges):
-        # print(pitch_idx)
-        if(template_num >= settings_obj.NUM_TEMPLATES):
-            print("ERROR: number of templates generated is greater than the number provided. Please check the template_definition.json file")
-            sys.exit()
-        for i in range(len(pitch_idx)):
-            pitch_values[template_num,template_layers[i]] = pitches[template_layers[i]][pitch_idx[i]]
-        template_num +=1
+    #ranges = [range(len(pitches[x])) for x in template_layers]
+    #template_num = 0
+    #for pitch_idx in itertools.product(*ranges):
+    #    print(pitch_idx)
+    #    if(template_num >= settings_obj.NUM_TEMPLATES):
+    #        print("ERROR: number of templates generated is greater than the number provided. Please check the template_definition.json file")
+    #        sys.exit()
+    #    for i in range(len(pitch_idx)):
+    #        pitch_values[template_num,template_layers[i]] = pitches[template_layers[i]][pitch_idx[i]]
+    #    template_num +=1
 
-    #for template_num in range(settings_obj.NUM_TEMPLATES):
-    #    for p in template_layers:
-    #        pitch_values[template_num, p] = pitches[p][template_num]
+    for template_num in range(settings_obj.NUM_TEMPLATES):
+        for p in template_layers:
+            pitch_values[template_num, p] = pitches[p][template_num]
+    template_num +=1
 
     if template_num != settings_obj.NUM_TEMPLATES :
         print(template_num)

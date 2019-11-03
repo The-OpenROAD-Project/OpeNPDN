@@ -209,13 +209,17 @@ if __name__ == '__main__':
     state = np.zeros((settings_obj.NUM_REGIONS_X,settings_obj.NUM_REGIONS_Y))
     with open(state_file, 'r') as infile:
         for line in infile:
-            data = re.findall(r'Region x = (\d+) y = (\d+), template = (\d+)',line);
-            data2 = [int(i) for i in data[0]]
-            x,y,temp = data2
-            assert x<settings_obj.NUM_REGIONS_X and x>=0, (
-            "Index x in template map.txt is not within the number of regions defined in template_definition.json ")
-            assert y<settings_obj.NUM_REGIONS_Y and y>=0, (
-            "Index y in template map.txt is not within the number of regions defined in template_definition.json ")
+            #data = re.findall(r'Region x = (\d+) y = (\d+), template = (\d+)',line);
+            data = re.findall(r'(\d+\.?\d*)\s+(\d+\.?\d*)\s+(\d+\.?\d*)\s+(\d+\.?\d*)\s+((?:\d+\.?\d*|\w+))\s*',line)
+            data2 = [float(i) for i in data[0]]
+            #x,y,temp = data2
+            x0,y0,x1,y1,temp =data2
+            #assert x<settings_obj.NUM_REGIONS_X and x>=0, (
+            #"Index x in template map.txt is not within the number of regions defined in template_definition.json ")
+            #assert y<settings_obj.NUM_REGIONS_Y and y>=0, (
+            #"Index y in template map.txt is not within the number of regions defined in template_definition.json ")
+            x = int(x0/(settings_obj.WIDTH_REGION*1e6))
+            y = int(y0/(settings_obj.LENGTH_REGION*1e6))
             state[x][y] = temp
     #state = np.zeros((settings_obj.NUM_REGIONS_Y,settings_obj.NUM_REGIONS_X))
     state = state.reshape(settings_obj.NUM_REGIONS_X*settings_obj.NUM_REGIONS_Y)
