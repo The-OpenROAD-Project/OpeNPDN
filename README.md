@@ -48,11 +48,11 @@ The packages in requirements.txt will be installed in a virtual environment duri
 ### Install on a bare-metal machine
 
 #### Clone repo and submodules
-`git clone --recursive https://github.com/VidyaChhabria/OpenROAD-PI.git`
+`git clone --recursive https://github.com/VidyaChhabria/OpeNPDN.git`
 
 #### Install
 ```
-cd OpenROAD-PI
+cd OpeNPDN
 make clean
 source install.sh
 make build
