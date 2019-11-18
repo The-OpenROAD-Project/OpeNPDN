@@ -141,7 +141,8 @@ inference:
 get_ir:
 	mkdir -p work &&\
 	$(PC) ./src/current_map_generator.py ${DEF_FILE} ${LEF_FILE} ${POW_FILE} ${CONGEST_RPT} ${CONGESTION_COMMAND} &&\
-	$(PC) ./src/IR_map_generator.py
+	$(PC) ./src/IR_map_generator.py &&\
+	$(PC) ./src/voltage_gen.py ${DEF_FILE} ${LEF_FILE} ${POW_FILE} ./output/IR_drop.csv
 
 test:
 	pytest
