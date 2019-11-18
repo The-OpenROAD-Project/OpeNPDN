@@ -48,6 +48,7 @@ import matplotlib.image as img
 import math
 import time
 import re
+from scipy import interpolate
 
 
 
@@ -155,6 +156,53 @@ def generate_IR_map_regionwise(state,current_map):
 #        with open('J_map.csv', 'w') as outfile:
 #            np.savetxt(outfile,J_full,delimiter=',')
 
+def interpolate_data(V,dimx,dimy):
+    settings_obj = T6_PSI_settings()
+    width = int(settings_obj.WIDTH_REGION*1e6)
+    height = int(settings_obj.LENGTH_REGION*1e6)
+
+    X = np.linspace(0,width,dimx)
+    Y = np.linspace(0,height,dimy)
+    
+    x,y = np.meshgrid(X,Y)
+    
+    f = interpolate.interp2d(x,y,V,kind='linear')
+    
+    Xnew = np.linspace(0,width,width)
+    Ynew = np.linspace(0,height,height)
+    Xng,Yng = np.meshgrid(Xnew,Ynew)
+    #Vnew = f(Xnew,Ynew)
+
+    Vnew = interpolate.griddata( np.array([x.ravel(), y.ravel()]).T, V.ravel(), 
+                        (Xng, Yng), method='cubic')
+
+    return Vnew    
+
+def extrapolate_data(V,dimx,dimy):
+    settings_obj = T6_PSI_settings()
+    width_in = int(settings_obj.NUM_REGIONS_X*settings_obj.WIDTH_REGION*1e6)
+    height_in = int(settings_obj.NUM_REGIONS_Y*settings_obj.LENGTH_REGION*1e6)
+
+    X = np.linspace(0,width_in, width_in )
+    Y = np.linspace(0,height_in,height_in)
+    
+    x,y = np.meshgrid(X,Y)
+    
+    Xnew = np.linspace(0,dimx,dimx)
+    Ynew = np.linspace(0,dimy,dimy)
+    Xng,Yng = np.meshgrid(Xnew,Ynew)
+    #Vnew = f(Xnew,Ynew)
+
+    #Vnew = interpolate.griddata( np.array([x.ravel(), y.ravel()]).T, V.ravel(), 
+    #                    (Xng, Yng), method='cubic')
+    Vnew_N = interpolate.griddata( np.array([x.ravel(), y.ravel()]).T, V.ravel(), 
+                        (Xng, Yng), method='nearest')
+    #extapolate the ends to the nearest 
+    #Vnew[np.isnan(Vnew)] = Vnew_N[np.isnan(Vnew)]
+    Vnew = Vnew_N
+    return Vnew    
+
+
 def generate_IR_map(state,current_map):
     eq_obj = construct_eqn()
     settings_obj = T6_PSI_settings()
@@ -179,6 +227,7 @@ def generate_IR_map(state,current_map):
         V = solution[int(template_start[n]+bot):int(template_start[n]+top)]
         max_drop[n] = max(settings_obj.VDD - V)
         V = V.reshape((dimy,dimx))
+        V = interpolate_data(V,dimx,dimy)
         if n % settings_obj.NUM_REGIONS_X == 0:
             V_row = V.T
         elif n % settings_obj.NUM_REGIONS_X == settings_obj.NUM_REGIONS_X -1:
@@ -189,7 +238,10 @@ def generate_IR_map(state,current_map):
                 V_full = np.hstack((V_full,V_row))
         else:
             V_row = np.vstack((V_row, V.T))
+    chip_dimx,chip_dimy = current_map.shape         
+    V_full = extrapolate_data(V_full,chip_dimx,chip_dimy)
     print("INFO: Saving IR map report")
+    print(V_full.shape)
     wc_ir = max(max_drop)
     img.imsave('./output/IR_map.png', np.flipud(V_full.T))
     with open('./output/IR_drop.csv', 'wb') as outfile:

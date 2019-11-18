@@ -260,10 +260,12 @@ def read_lef(lef_files):
 
 def create_power_map(cell_data):
     settings_obj = T6_PSI_settings()
-    width = int(cell_data['area'][1][0])
-    height = int(cell_data['area'][1][1])
-    width = int(settings_obj.WIDTH_REGION*settings_obj.NUM_REGIONS_X*1e6)
-    height = int(settings_obj.LENGTH_REGION*settings_obj.NUM_REGIONS_Y*1e6)
+    width1 = int(cell_data['area'][1][0])
+    height1 = int(cell_data['area'][1][1])
+    width2 = int(settings_obj.WIDTH_REGION*settings_obj.NUM_REGIONS_X*1e6)
+    height2 = int(settings_obj.LENGTH_REGION*settings_obj.NUM_REGIONS_Y*1e6)
+    width = max(width1,width2)
+    height = max(height1,height2)
     power_map = np.zeros((width * 10, height * 10))
     for name, inst in cell_data['instances'].items():
         ll_x = int(inst['ll_x'] * 10)
