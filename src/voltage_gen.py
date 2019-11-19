@@ -16,28 +16,38 @@ def process_voltage(cell_data,IR_file):
         V = settings_obj.VDD - IR_drop 
     width1 = int(cell_data['area'][1][0])
     height1 = int(cell_data['area'][1][1])
+    #print("area %f %f"%(cell_data['area'][1][0],cell_data['area'][1][1]))
     width2 = int(settings_obj.WIDTH_REGION*settings_obj.NUM_REGIONS_X*1e6)
     height2 = int(settings_obj.LENGTH_REGION*settings_obj.NUM_REGIONS_Y*1e6)
     width = max(width1,width2)
     height = max(height1,height2)
-    print(IR_drop.shape)
+    #print(IR_drop.shape)
     assert width == IR_drop.shape[0], (
     "Loaded map does not match template width, template %d IR map %d"%( 
                                                    width, IR_drop.shape[0])) 
     assert height == IR_drop.shape[1], (
     "Loaded map does not match template height, template %d IR map %d"%( 
                                                    height,IR_drop.shape[1])) 
-    print(settings_obj.VDD )
-    print(V)
+    #print(settings_obj.VDD )
+    #print(V)
     V_map_0p1um = np.repeat(V.repeat(10,axis = 1),10,axis=0)
+    #print("chip width %d %d"%(width,height))
+    #print("chip width from def %d %d"%(width1,height1))
     for name, inst in cell_data['instances'].items():
         ll_x = int(inst['ll_x'] * 10)
         ll_y = int(inst['ll_y'] * 10)
         ur_x = int(inst['ur_x'] * 10)
         ur_y = int(inst['ur_y'] * 10)
-        area = (ur_x - ll_x) * (ur_y - ll_y)
-        total_V =  V_map_0p1um[ll_x:ur_x, ll_y:ur_y].sum()
-        avg_V = total_V/area
+        #print("ll x %d y %d ur x %d y %d"%(ll_x,ll_y,ur_x,ur_y))
+        #area = (ur_x - ll_x) * (ur_y - ll_y)
+        total_V = V_map_0p1um[ll_x:ur_x, ll_y:ur_y].sum()
+        area = np.size(V_map_0p1um[ll_x:ur_x, ll_y:ur_y])
+        if area == 0:
+            avg_V = 0
+            print("Warning cell %s not defined within the area of the IR map"%(
+                        name))
+        else:
+            avg_V = total_V/area
         inst['V'] = avg_V
     return cell_data
 

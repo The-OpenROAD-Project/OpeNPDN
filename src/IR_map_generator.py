@@ -160,22 +160,25 @@ def interpolate_data(V,dimx,dimy):
     settings_obj = T6_PSI_settings()
     width = int(settings_obj.WIDTH_REGION*1e6)
     height = int(settings_obj.LENGTH_REGION*1e6)
+    #print("width height inside %d %d"%(width,height))
+    #print("width height xy inside %d %d"%(dimx,dimy))
 
     X = np.linspace(0,width,dimx)
     Y = np.linspace(0,height,dimy)
     
-    x,y = np.meshgrid(X,Y)
+    x,y = np.meshgrid(Y,X) # generates no2*no1 array
     
-    f = interpolate.interp2d(x,y,V,kind='linear')
+    #f = interpolate.interp2d(x,y,V,kind='linear')
     
     Xnew = np.linspace(0,width,width)
     Ynew = np.linspace(0,height,height)
-    Xng,Yng = np.meshgrid(Xnew,Ynew)
+    Xng,Yng = np.meshgrid(Ynew,Xnew)
     #Vnew = f(Xnew,Ynew)
 
     Vnew = interpolate.griddata( np.array([x.ravel(), y.ravel()]).T, V.ravel(), 
                         (Xng, Yng), method='cubic')
 
+    #print(Vnew.shape)
     return Vnew    
 
 def extrapolate_data(V,dimx,dimy):
@@ -186,11 +189,11 @@ def extrapolate_data(V,dimx,dimy):
     X = np.linspace(0,width_in, width_in )
     Y = np.linspace(0,height_in,height_in)
     
-    x,y = np.meshgrid(X,Y)
+    x,y = np.meshgrid(Y,X)
     
     Xnew = np.linspace(0,dimx,dimx)
     Ynew = np.linspace(0,dimy,dimy)
-    Xng,Yng = np.meshgrid(Xnew,Ynew)
+    Xng,Yng = np.meshgrid(Ynew,Xnew)
     #Vnew = f(Xnew,Ynew)
 
     #Vnew = interpolate.griddata( np.array([x.ravel(), y.ravel()]).T, V.ravel(), 
@@ -226,22 +229,36 @@ def generate_IR_map(state,current_map):
         top = g_start[1]
         V = solution[int(template_start[n]+bot):int(template_start[n]+top)]
         max_drop[n] = max(settings_obj.VDD - V)
-        V = V.reshape((dimy,dimx))
+        V = V.reshape((dimx,dimy),order='F')
+        #print("shape of V %d %d"%(V.shape))
+        #print("dimx dim y %d %d"%(dimx,dimy))
         V = interpolate_data(V,dimx,dimy)
+        #print("shape of V %d %d"%(V.shape))
         if n % settings_obj.NUM_REGIONS_X == 0:
-            V_row = V.T
+            V_row = V
+            #print("shape of V row %d %d"%(V_row.shape))
+            if n % settings_obj.NUM_REGIONS_X == settings_obj.NUM_REGIONS_X -1:
+                if int(n / settings_obj.NUM_REGIONS_X) == 0:
+                    V_full = V_row
+                    #print("shape of V full %d %d"%(V_full.shape))
+                else:
+                    V_full = np.hstack((V_full,V_row))
         elif n % settings_obj.NUM_REGIONS_X == settings_obj.NUM_REGIONS_X -1:
-            V_row = np.vstack((V_row, V.T))
+            V_row = np.vstack((V_row, V))
             if int(n / settings_obj.NUM_REGIONS_X) == 0:
                 V_full = V_row
             else:
                 V_full = np.hstack((V_full,V_row))
         else:
-            V_row = np.vstack((V_row, V.T))
+            V_row = np.vstack((V_row, V))
     chip_dimx,chip_dimy = current_map.shape         
+    #print("shape of curr %d %d"%(current_map.shape))
+    #print("shape of curr calc %d %d"%(chip_dimx,chip_dimy))
+    #print("shape of V_full %d %d"%(V_full.shape))
     V_full = extrapolate_data(V_full,chip_dimx,chip_dimy)
-    print("INFO: Saving IR map report")
-    print(V_full.shape)
+    #print("shape of V_full %d %d"%(V_full.shape))
+    #print("INFO: Saving IR map report")
+    #print(V_full.shape)
     wc_ir = max(max_drop)
     img.imsave('./output/IR_map.png', np.flipud(V_full.T))
     with open('./output/IR_drop.csv', 'wb') as outfile:

@@ -266,6 +266,7 @@ def create_power_map(cell_data):
     height2 = int(settings_obj.LENGTH_REGION*settings_obj.NUM_REGIONS_Y*1e6)
     width = max(width1,width2)
     height = max(height1,height2)
+    #print("current_map %d %d"%(width,height))
     power_map = np.zeros((width * 10, height * 10))
     for name, inst in cell_data['instances'].items():
         ll_x = int(inst['ll_x'] * 10)
