@@ -47,8 +47,8 @@ from construct_eqn import construct_eqn
 class simulated_annealer():
 
     def __init__(self, initial_state, T_init, T_final, alpha_temp,
-                 num_moves_per_step, current_map):
-        self.settings_obj = T6_PSI_settings()
+                 num_moves_per_step, current_map,congestion_enabled):
+        self.settings_obj = T6_PSI_settings.load_obj()
         self.eq_obj = construct_eqn()
         self.state = initial_state
         self.T_init = T_init
@@ -59,6 +59,7 @@ class simulated_annealer():
                            ) / self.settings_obj.VDD
         self.IR_PENALTY = 32 
         self.CONG_PENALTY = 15 
+        self.congestion_enabled = congestion_enabled
 
     def sim_anneal(self, all_templates, template_list, signal_cong):
         T = self.T_init
@@ -74,12 +75,21 @@ class simulated_annealer():
             attributes = self.settings_obj.LAYERS[layer]
             dirs = attributes['direction']
             if dirs == 'V':
-                num_tracks_layer[layer] = math.floor(
+                if self.congestion_enabled == 1:
+                    num_tracks_layer[layer] = math.floor(
                     self.settings_obj.WIDTH_REGION / attributes['t_spacing'])
+                else: 
+                    num_tracks_layer[layer] = 0
             else:
-                num_tracks_layer[layer] = math.floor(
+                if self.congestion_enabled == 1:
+                    num_tracks_layer[layer] = math.floor(
                     self.settings_obj.LENGTH_REGION / attributes['t_spacing'])
-            total_tracks = total_tracks + num_tracks_layer[layer]
+                else: 
+                    num_tracks_layer[layer] = 0
+            if self.congestion_enabled == 1:
+                total_tracks = total_tracks + num_tracks_layer[layer]
+            else:
+                total_tracks = 1
 
         template_util = {}
         for i, template_num in enumerate(all_templates):
@@ -96,7 +106,8 @@ class simulated_annealer():
                                                        signal_cong)
 
 
-        for n, T in tqdm(enumerate(Tvals), total=len(Tvals)):
+        #for n, T in tqdm(enumerate(Tvals), total=len(Tvals)):
+        for n, T in enumerate(Tvals):
             for i in range(self.num_moves_per_step):
                 next_state,next_pos = self.move(cur_state, all_templates)
                 next_energy,next_max_drop = self.delta_energy(cur_state, cur_energy,
@@ -126,8 +137,11 @@ class simulated_annealer():
         temp_util =np.zeros(len(state))
         for n, template in enumerate(state):
             tot_cong[n] = signal_cong[n] + template_util[template]
-            temp_util[n] = (template_util[template]-temp_util_min)/(
+            if self.congestion_enabled ==1:
+                temp_util[n] = (template_util[template]-temp_util_min)/(
                                 temp_util_max-temp_util_min)
+            else:
+                temp_util[n] =0
             y = math.floor(n / self.settings_obj.NUM_REGIONS_X)
             x = n % self.settings_obj.NUM_REGIONS_X
             regional_current, map_row = self.eq_obj.get_regional_current(
@@ -201,8 +215,11 @@ class simulated_annealer():
         solution = self.eq_obj.solve_ir(G_old, J_old)
         g_start = template_obj.start
         tot_cong = template_util[old_template] +signal_cong[index]
-        temp_util = (template_util[old_template]-temp_util_min)/(
+        if self.congestion_enabled ==1:
+            temp_util = (template_util[old_template]-temp_util_min)/(
                                 temp_util_max-temp_util_min)
+        else:
+            temp_util = 0
 
         V = solution[int(g_start[0]):int(g_start[1])]
         max_drop = max(self.settings_obj.VDD - V)
@@ -231,8 +248,12 @@ class simulated_annealer():
         V = solution[int(g_start[0]):int(g_start[1])]
         max_drop = max(self.settings_obj.VDD - V)
         tot_cong = template_util[new_template] +signal_cong[index]
-        temp_util = (template_util[new_template]-temp_util_min)/(
+
+        if self.congestion_enabled ==1:
+            temp_util = (template_util[new_template]-temp_util_min)/(
                                 temp_util_max-temp_util_min)
+        else:
+            temp_util = 0
         if max_drop < self.settings_obj.IR_DROP_LIMIT:
             beta_ir = 0
         else:
@@ -290,8 +311,11 @@ class simulated_annealer():
         for i, layer in enumerate(self.settings_obj.PDN_layers_ids):
             attributes = self.settings_obj.LAYERS[layer]
             dirs = attributes['direction']
-            tracks_per_stripe = math.ceil(template_obj.widths[i] /
+            if self.congestion_enabled == 1:
+                tracks_per_stripe = math.ceil(template_obj.widths[i] /
                                           attributes['t_spacing'])
+            else:
+                tracks_per_stripe = 0
             if dirs == 'V':
                 used_tracks[i] = math.floor(
                     (self.settings_obj.WIDTH_REGION * tracks_per_stripe) /
@@ -300,7 +324,10 @@ class simulated_annealer():
                 used_tracks[i] = math.floor(
                     (self.settings_obj.LENGTH_REGION * tracks_per_stripe) /
                     template_obj.pitches[i])
-            util_layer[i] = used_tracks[i] / num_tracks_layer[layer]
+            if self.congestion_enabled == 1:
+                util_layer[i] = used_tracks[i] / num_tracks_layer[layer]
+            else:
+                util_layer[i] = 0
             template_used_tracks = template_used_tracks + used_tracks[i]
         template_util = (template_used_tracks / total_tracks) * 2
         return template_util

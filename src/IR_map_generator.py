@@ -41,7 +41,6 @@ import sys
 import numpy as np
 from create_template import define_templates
 from T6_PSI_settings import T6_PSI_settings
-from simulated_annealer import simulated_annealer
 from construct_eqn import construct_eqn
 from scipy import sparse as sparse_mat
 import matplotlib.image as img
@@ -99,7 +98,7 @@ def main():
 
 def generate_IR_map_regionwise(state,current_map):
     eq_obj = construct_eqn()
-    settings_obj = T6_PSI_settings()
+    settings_obj = T6_PSI_settings.load_obj()
     
     template_list = define_templates(settings_obj, generate_g=0)
     max_drop = settings_obj.VDD * np.ones(len(state))
@@ -157,7 +156,7 @@ def generate_IR_map_regionwise(state,current_map):
 
 def generate_IR_map(state,current_map):
     eq_obj = construct_eqn()
-    settings_obj = T6_PSI_settings()
+    settings_obj = T6_PSI_settings.load_obj()
     
     template_list = define_templates(settings_obj, generate_g=0)
     max_drop = settings_obj.VDD * np.ones(len(state))
@@ -181,6 +180,11 @@ def generate_IR_map(state,current_map):
         V = V.reshape((dimy,dimx))
         if n % settings_obj.NUM_REGIONS_X == 0:
             V_row = V.T
+            if settings_obj.NUM_REGIONS_X == 1:
+                if int(n / settings_obj.NUM_REGIONS_X) == 0:
+                    V_full = V_row
+                else:
+                    V_full = np.hstack((V_full,V_row))
         elif n % settings_obj.NUM_REGIONS_X == settings_obj.NUM_REGIONS_X -1:
             V_row = np.vstack((V_row, V.T))
             if int(n / settings_obj.NUM_REGIONS_X) == 0:
@@ -205,17 +209,21 @@ def generate_IR_map(state,current_map):
 
 
 if __name__ == '__main__':
-    settings_obj = T6_PSI_settings()
+    settings_obj = T6_PSI_settings.load_obj()
     state = np.zeros((settings_obj.NUM_REGIONS_X,settings_obj.NUM_REGIONS_Y))
     with open(state_file, 'r') as infile:
         for line in infile:
-            data = re.findall(r'Region x = (\d+) y = (\d+), template = (\d+)',line);
-            data2 = [int(i) for i in data[0]]
-            x,y,temp = data2
-            assert x<settings_obj.NUM_REGIONS_X and x>=0, (
-            "Index x in template map.txt is not within the number of regions defined in template_definition.json ")
-            assert y<settings_obj.NUM_REGIONS_Y and y>=0, (
-            "Index y in template map.txt is not within the number of regions defined in template_definition.json ")
+            #data = re.findall(r'Region x = (\d+) y = (\d+), template = (\d+)',line);
+            data = re.findall(r'(\d+\.?\d*)\s+(\d+\.?\d*)\s+(\d+\.?\d*)\s+(\d+\.?\d*)\s+((?:\d+\.?\d*|\w+))\s*',line)
+            data2 = [float(i) for i in data[0]]
+            #x,y,temp = data2
+            x0,y0,x1,y1,temp =data2
+            #assert x<settings_obj.NUM_REGIONS_X and x>=0, (
+            #"Index x in template map.txt is not within the number of regions defined in template_definition.json ")
+            #assert y<settings_obj.NUM_REGIONS_Y and y>=0, (
+            #"Index y in template map.txt is not within the number of regions defined in template_definition.json ")
+            x = int(x0/(settings_obj.WIDTH_REGION*1e6))
+            y = int(y0/(settings_obj.LENGTH_REGION*1e6))
             state[x][y] = temp
     #state = np.zeros((settings_obj.NUM_REGIONS_Y,settings_obj.NUM_REGIONS_X))
     state = state.reshape(settings_obj.NUM_REGIONS_X*settings_obj.NUM_REGIONS_Y)

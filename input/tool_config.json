@@ -1,7 +1,7 @@
 {
     "num_vdd_per_region": 1	,
     "current_map_num_regions": 6,
-    "num_maps": 40,
+    "num_maps": 20,
     "start_maps": 1	,
     "num_parallel_runs": 20  ,
     "num_per_run": 1  ,

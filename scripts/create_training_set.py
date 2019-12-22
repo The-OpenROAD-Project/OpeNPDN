@@ -8,7 +8,7 @@ sys.path.append('src')
 from T6_PSI_settings import T6_PSI_settings
 from scipy.stats import multivariate_normal
 import math
-settings_obj = T6_PSI_settings();
+settings_obj = T6_PSI_settings.load_obj();
 
 num_of_parallel = settings_obj.num_parallel_runs
 num_of_maps_per_run = settings_obj.num_per_run

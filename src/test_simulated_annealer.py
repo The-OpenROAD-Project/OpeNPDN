@@ -61,7 +61,7 @@ def annealer():
         0.1,
         0.9,
         5,
-        0)
+        0,0)
     return annealer
 #TODO sim anneal, energy, delta energy 
 def test_cool_down(annealer):

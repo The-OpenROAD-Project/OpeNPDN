@@ -54,10 +54,15 @@ def main():
     """ Main code which calls all the function to create the
     G matrices for all tempaltes"""
     start = time.time()
-    settings_obj = T6_PSI_settings()
+    settings_obj = T6_PSI_settings.load_obj()
     template_list = define_templates(settings_obj, generate_g=1)
     end = time.time()
     print("Creation time:%4.3f"%(end - start))
+    dirname = settings_obj.template_file
+    fname = dirname + "/refined_template_list.txt" 
+    template_list_num = np.arange(len(template_list))
+    np.savetxt(fname,template_list_num,fmt='%d')
+
     #print("\n")
 
 
@@ -82,26 +87,26 @@ def define_templates(settings_obj, generate_g):
     # Store a local copy of the variables from the settings_obj object from the
     # information in the JSON file
     for layer in settings_obj.PDN_layers_ids:
-        attributes = settings_obj.template_data['layers'][layer]
+        attributes = settings_obj.LAYERS[layer]
         width_values.append(attributes['width'])
         min_width.append(attributes['min_width'])
         res_per_l.append(attributes['res'])
         dirs.append(attributes['direction'])
         pitches.append(attributes['pitch'])
-    layer = 'M1'
-    via_res_1 = settings_obj.template_data['layers'][layer]['via_res']
+    layer = settings_obj.TECH_LAYERS[0]
+    via_res_1 = settings_obj.LAYERS[layer]['via_res']
 
     #TODO handle for generic names
     # Create the template with multiple layers based on the combination of
     # pitches of layers in the JSON
-    for l in range(2, settings_obj.NUM_LAYERS + 1):
-        layer = 'M%d' % l
+    for l in range(1, settings_obj.NUM_LAYERS ):
+        layer = settings_obj.TECH_LAYERS[l]
         if layer in settings_obj.PDN_layers_ids:
             via_res.append(via_res_1)
-            via_res_1 = settings_obj.template_data['layers'][layer]['via_res']
+            via_res_1 = settings_obj.LAYERS[layer]['via_res']
         else:
             via_res_1 += float(
-                settings_obj.template_data['layers'][layer]['via_res'])
+                settings_obj.LAYERS[layer]['via_res'])
 
     width_values = np.array(width_values)
     res_per_l = np.array(res_per_l)
@@ -128,20 +133,21 @@ def define_templates(settings_obj, generate_g):
             #        "ERROR: Layer %d does not have the corrent number of templates."
             #        % p, "Please check the template_definition.json file")
             #    sys.exit()
-    ranges = [range(len(pitches[x])) for x in template_layers]
-    template_num = 0
-    for pitch_idx in itertools.product(*ranges):
-        # print(pitch_idx)
-        if(template_num >= settings_obj.NUM_TEMPLATES):
-            print("ERROR: number of templates generated is greater than the number provided. Please check the template_definition.json file")
-            sys.exit()
-        for i in range(len(pitch_idx)):
-            pitch_values[template_num,template_layers[i]] = pitches[template_layers[i]][pitch_idx[i]]
-        template_num +=1
+    #ranges = [range(len(pitches[x])) for x in template_layers]
+    #template_num = 0
+    #for pitch_idx in itertools.product(*ranges):
+    #    print(pitch_idx)
+    #    if(template_num >= settings_obj.NUM_TEMPLATES):
+    #        print("ERROR: number of templates generated is greater than the number provided. Please check the template_definition.json file")
+    #        sys.exit()
+    #    for i in range(len(pitch_idx)):
+    #        pitch_values[template_num,template_layers[i]] = pitches[template_layers[i]][pitch_idx[i]]
+    #    template_num +=1
 
-    #for template_num in range(settings_obj.NUM_TEMPLATES):
-    #    for p in template_layers:
-    #        pitch_values[template_num, p] = pitches[p][template_num]
+    for template_num in range(settings_obj.NUM_TEMPLATES):
+        for p in template_layers:
+            pitch_values[template_num, p] = pitches[p][template_num]
+    template_num +=1
 
     if template_num != settings_obj.NUM_TEMPLATES :
         print(template_num)

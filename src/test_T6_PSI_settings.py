@@ -40,7 +40,7 @@ from T6_PSI_settings import T6_PSI_settings
 import json
 
 def test_load_json():
-    settings_obj = T6_PSI_settings()
+    settings_obj = T6_PSI_settings.load_obj()
     test_data = settings_obj.load_json('test/test.json')
     exp_data ={}
     exp_data['test'] ={}

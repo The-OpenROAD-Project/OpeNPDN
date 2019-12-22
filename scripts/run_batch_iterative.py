@@ -8,7 +8,7 @@ sys.path.append('src')
 
 from T6_PSI_settings import T6_PSI_settings
 
-settings_obj = T6_PSI_settings();
+settings_obj = T6_PSI_settings.load_obj();
 
 if len(sys.argv)>1 and sys.argv[1] == "no_congestion":
     congestion_enabled = 0

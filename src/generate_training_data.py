@@ -43,12 +43,13 @@ from create_template import define_templates
 from T6_PSI_settings import T6_PSI_settings
 from simulated_annealer import simulated_annealer
 import random
-from eliminate_templates import load_template_list
+from tqdm import tqdm
+#from eliminate_templates import load_template_list
 
 def main():
     # Read the json user input file and the current maps that need to be run
     # taken as an argument from the scripts
-    settings_obj = T6_PSI_settings()
+    settings_obj = T6_PSI_settings.load_obj()
     if len(sys.argv) == 3:
         map_start = int(sys.argv[1])
         num_maps = int(sys.argv[2])
@@ -67,6 +68,7 @@ def main():
         print("Warning defaulting to %d %d and with congestion" % (map_start, num_maps))
         print(sys.argv)
 
+    #print(num_maps)
     # Initialize the SA parameters
     T_init = 70
     T_final = 0.0005
@@ -78,17 +80,18 @@ def main():
     max_drop = [] #np.zeros((num_maps, settings_obj.NUM_REGIONS))
     template_list = define_templates(settings_obj, generate_g=0)
     congestion = []
-    all_templates = load_template_list()#range(settings_obj.NUM_TEMPLATES))
+    all_templates = settings_obj.load_template_list()#range(settings_obj.NUM_TEMPLATES))
     size_region_x = int(settings_obj.WIDTH_REGION * 1e6)
     size_region_y = int(settings_obj.LENGTH_REGION * 1e6)
     current_maps = []
-    for i in range(num_maps):
+    for i in tqdm(range(num_maps)):
 #        print(i)
         power_map_file = settings_obj.map_dir + "current_map_%d.csv" % (
             i + map_start)
         currents = np.genfromtxt(power_map_file, delimiter=',')
         for y in range(settings_obj.current_map_num_regions):
             for x in range(settings_obj.current_map_num_regions):
+                print("%d %d "%(x,y))
                 #region and neighbors
                 current_region = np.zeros((3*size_region_x,3*size_region_y))
                 init_state = np.zeros(9, int)
@@ -152,7 +155,8 @@ def main():
                             currents[x_start:x_end,y_start:y_end])
                     
                 pdn_opt = simulated_annealer(init_state, T_init, T_final, 
-                        alpha_temp, num_moves_per_step, current_region)
+                        alpha_temp, num_moves_per_step,
+                        current_region,congestion_enabled)
                 n_state, n_e, n_max_drop = pdn_opt.sim_anneal(
                     all_templates, template_list,signal_cong)
                 state.append(n_state)

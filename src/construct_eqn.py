@@ -60,7 +60,7 @@ class construct_eqn():
     def __init__(self):
         """ Initializes construct_eq class with the height and width of the
         region and the c4 bump location"""
-        self.settings_obj = T6_PSI_settings()
+        self.settings_obj = T6_PSI_settings.load_obj()
         self.size_region_x = int(self.settings_obj.WIDTH_REGION * 1e6)
         self.size_region_y = int(self.settings_obj.LENGTH_REGION * 1e6)
         self.WIDTH_REGION = self.settings_obj.WIDTH_REGION
@@ -414,7 +414,7 @@ class construct_eqn():
 
 
 if __name__ == '__main__':
-    settings_obj = T6_PSI_settings()
+    settings_obj = T6_PSI_settings.load_obj()
     all_template_list = define_templates(settings_obj, generate_g=1)
     start = time.time()
     eq_obj = construct_eqn()
