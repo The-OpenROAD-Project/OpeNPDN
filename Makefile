@@ -1,12 +1,13 @@
 SHELL = bash
 PC=python3
 DEF_FILE= /home/sachin00/chhab011/tmp/OpenROAD/src/OpeNPDN/test/aes/aes.def
-POW_FILE= /home/sachin00/chhab011/tmp/OpenROAD/src/OpeNPDN/test/aes/aes.pwr.rpt
+POW_FILE= /home/grads/chhab011/./aes/aes.pwr.rpt
+#/home/sachin00/chhab011/tmp/OpenROAD/src/OpeNPDN/test/aes/aes.pwr.rpt
 LEF_FILE= "./platforms/nangate45/NangateOpenCellLibrary.mod.lef"
 CONGEST_RPT= ""
 ODB_LOC = "./build/modules/OpenDB/src/swig/python/opendbpy.py"
-MODE = 'INFERENCE'
-#MODE = 'TRAIN'
+#MODE = 'INFERENCE'
+MODE = 'TRAIN'
 CHECKPOINT_DIR = "./checkpoints"
 
 TERM_SHELL= $(shell echo "$$0")
@@ -41,7 +42,7 @@ maps:
 templates: 
 	$(PC) ./src/T6_PSI_settings.py ${ODB_LOC} ${CHECKPOINT_DIR} ${MODE} ${LEF_FILE} &&\
 	mkdir -p templates
-	$(PC) ./src/create_template.py 
+	$(PC) ./src/create_template_new.py 
 
 data:
 	$(PC) ./scripts/run_batch_iterative.py ${CONGESTION_COMMAND}
@@ -50,7 +51,7 @@ training:
 	$(PC) ./src/cnn_train.py ${CONGESTION_COMMAND}
 
 parse_inputs:
-	$(PC) ./src/current_map_generator.py ${POW_FILE} 
+	$(PC) ./src/current_map_generator.py ${POW_FILE} ${CONGESTION_COMMAND} ${CONGEST_RPT} 
 
 predict:
 	$(PC) ./src/cnn_inference.py ${CONGESTION_COMMAND}
@@ -96,7 +97,7 @@ all:
 	echo "************* Creating the defined templates *******************" &&\
 	echo "****************************************************************" &&\
 	$(PC) ./src/T6_PSI_settings.py ${ODB_LOC} ${CHECKPOINT_DIR} ${MODE} ${LEF_FILE} &&\
-	$(PC) ./src/create_template.py 
+	$(PC) ./src/create_template_new.py 
 	echo "****************************************************************" &&\
 	echo "************* Creating the maps for SA *************************" &&\
 	echo "****************************************************************" &&\
@@ -115,7 +116,7 @@ all:
 	echo "****************************************************************" &&\
 	echo "************* Creating the testcase current map ****************" &&\
 	echo "****************************************************************" &&\
-	$(PC) ./src/current_map_generator.py ${DEF_FILE} ${LEF_FILE} ${POW_FILE} ${CONGESTION_COMMAND} &&\
+	$(PC) ./src/current_map_generator.py ${POW_FILE} ${CONGESTION_COMMAND} ${CONGEST_RPT} &&\
 	echo "****************************************************************" &&\
 	echo "***************** Using CNN to synthesize PDN ******************" &&\
 	echo "****************************************************************" &&\
@@ -136,19 +137,19 @@ train:
 	mkdir -p input/current_maps &&\
 	$(PC) ./src/T6_PSI_settings.py ${ODB_LOC} ${CHECKPOINT_DIR} ${MODE} ${LEF_FILE} &&\
 	$(PC) ./scripts/create_training_set.py &&\
-	$(PC) ./src/create_template.py &&\
+	$(PC) ./src/create_template_new.py &&\
 	$(PC) ./scripts/run_batch_iterative.py ${CONGESTION_COMMAND} &&\
 	$(PC) ./src/cnn_train.py ${CONGESTION_COMMAND}
 
 inference:
 	mkdir -p work &&\
-	$(PC) ./src/current_map_generator.py ${DEF_FILE} ${LEF_FILE} ${POW_FILE} ${CONGEST_RPT} ${CONGESTION_COMMAND} && \
+	$(PC) ./src/current_map_generator.py ${POW_FILE} ${CONGESTION_COMMAND} ${CONGEST_RPT} && \
 	$(PC) ./src/cnn_inference.py ${CONGESTION_COMMAND} && \
 	$(PC) ./src/IR_map_generator.py
 
 get_ir:
 	mkdir -p work &&\
-	$(PC) ./src/current_map_generator.py ${DEF_FILE} ${LEF_FILE} ${POW_FILE} ${CONGEST_RPT} ${CONGESTION_COMMAND} &&\
+	$(PC) ./src/current_map_generator.py ${POW_FILE} ${CONGESTION_COMMAND} ${CONGEST_RPT} &&\
 	$(PC) ./src/IR_map_generator.py
 
 test:

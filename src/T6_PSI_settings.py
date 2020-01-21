@@ -45,15 +45,16 @@ import pickle
 
 import importlib.util
 import numpy as np
+from pprint import pprint
 
 
 class T6_PSI_settings():
 
-    def __init__(self,db,ODB_LOC,checkpoint_dir):
+    def __init__(self,db,ODB_LOC,checkpoint_dir,mode):
         
         self.ODB_loc = ODB_LOC
         tech = db.getTech()
-        lef_unit = tech.getDbUnitsPerMicron() * 1e6 # divide number by this to
+        self.lef_unit = tech.getDbUnitsPerMicron() * 1e6 # divide number by this to
         layers = tech.getLayers()
 
         self.work_dir = "./"
@@ -94,12 +95,16 @@ class T6_PSI_settings():
         stdcells_list = tcl_parser_obj.list_grid_stdcell()
         temp0 = tcl_parser_obj.get_grid_stdcell(stdcells_list[0])
         chip = db.getChip()
-        block = chip.getBlock()
-        unit_micron = 1/block.getDefUnits()
+        if mode == 'INFERENCE':
+            block = chip.getBlock()
+            unit_micron = 1/block.getDefUnits()
 
-        die_area = block.getDieArea()
-        size_x = abs(die_area.xMax() - die_area.xMin())*unit_micron 
-        size_y = abs(die_area.yMax() - die_area.yMin())*unit_micron 
+            die_area = block.getDieArea()
+            size_x = abs(die_area.xMax() - die_area.xMin())*unit_micron 
+            size_y = abs(die_area.yMax() - die_area.yMin())*unit_micron 
+        else:
+            size_x = self.template_data['property']['SIZE_REGION_X']
+            size_y = self.template_data['property']['SIZE_REGION_Y']
         size_x *= 1e3
         size_y *= 1e3
         size_x =round(size_x)*1e-9 
@@ -122,11 +127,11 @@ class T6_PSI_settings():
             layer_name = layer.getName()
             self.TECH_LAYERS.append(layer_name)
             self.LAYERS[layer_name] = {}
-            self.LAYERS[layer_name]['min_width'] = layer.getWidth() / lef_unit
+            self.LAYERS[layer_name]['min_width'] = layer.getWidth() / self.lef_unit
             self.LAYERS[layer_name]['via_res'] = self.template_data['layers'][layer_name]['via_res']
             self.LAYERS[layer_name]["width"] = 0 # default value? layer.getWidth() ?
             self.LAYERS[layer_name]['pitch'] = 0 # default value? layer.getPitch() ?
-            self.LAYERS[layer_name]['t_spacing'] = layer.getPitch() / lef_unit
+            self.LAYERS[layer_name]['t_spacing'] = layer.getPitch() / self.lef_unit
             self.LAYERS[layer_name]['res'] = layer.getResistance()
             if layer.getDirection() == 'VERTICAL' or layer.getDirection() == 'V':
                 layer_dir = 'V'
@@ -378,7 +383,6 @@ if __name__ == '__main__':
         odb = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(odb)
         db = odb.dbDatabase.create()
-        #"/home/sachin00/chhab011/OpenDB/tests/data/gscl45nm.lef"
         odb.odb_read_lef(db,lef_files)
     elif mode == 'INFERENCE':
         print("OpeNPDN Inference Mode:")
@@ -394,7 +398,7 @@ if __name__ == '__main__':
         print("MODE not recognize, possible inputs are \'TRAIN\' or \'INFERENCE\'")
         exit(-1)
 
-    obj = T6_PSI_settings(db,odb_loc,checkpoint_dir)
+    obj = T6_PSI_settings(db,odb_loc,checkpoint_dir,mode)
     filehandler = open(obj.work_dir+"work/T6_PSI_settings.obj","wb")
     pickle.dump(obj,filehandler)
     filehandler.close()

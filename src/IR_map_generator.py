@@ -39,14 +39,17 @@ This is the main code that runs simulated annleaing to decide the templates
 
 import sys
 import numpy as np
-from create_template import define_templates
+from create_template_new import load_templates
+from create_template_new import template
+from create_template_new import node
 from T6_PSI_settings import T6_PSI_settings
-from construct_eqn import construct_eqn
+from construct_eqn_new import construct_eqn
 from scipy import sparse as sparse_mat
 import matplotlib.image as img
 import math
 import time
 import re
+from pprint import pprint
 
 
 
@@ -55,173 +58,13 @@ state_file = "./output/template_map.txt"
 #state = np.array([1,2,1,2])
 
 def main():
-    # Read the json user input file and the current maps that need to be run
-    # taken as an argument from the scripts
-    #settings_obj = T6_PSI_settings()
-    pass
-#    T_init = 70
-#    T_final = 0.0005
-#    alpha_temp = 0.95
-#    num_moves_per_step = 5
-#
-#    state = np.zeros((1, settings_obj.NUM_REGIONS))
-#    e = np.zeros(1)
-#    max_drop = np.zeros((1, settings_obj.NUM_REGIONS))
-#    template_list = define_templates(settings_obj, generate_g=0)
-#    for i in range(1):
-#        print(i)
-#        power_map_file = settings_obj.map_dir + "current_map_%d.csv" % (
-#            i + map_start)
-#        currents = np.genfromtxt(power_map_file, delimiter=',')
-#
-#        all_templates = list(range(settings_obj.NUM_TEMPLATES))
-#        init_state = np.zeros(settings_obj.NUM_REGIONS, int)
-#
-#        if len(init_state) != settings_obj.NUM_REGIONS:
-#            print("please check the length of init state")
-#        pdn_opt = simulated_annealer(init_state, T_init, T_final, alpha_temp,
-#                                     num_moves_per_step, currents)
-#        state[i, :], e[i], max_drop[i, :] = pdn_opt.sim_anneal(
-#            all_templates, template_list)
-#    with open(
-#            settings_obj.parallel_run_dir + 'max_drop_%d_to_%d.csv' %
-#        (map_start, map_start + num_maps - 1), 'w') as outfile:
-#        np.savetxt(outfile, max_drop, delimiter=',', fmt='%f')
-#    with open(
-#            settings_obj.parallel_run_dir + 'state_%d_to_%d.csv' %
-#        (map_start, map_start + num_maps - 1), 'w') as outfile:
-#        np.savetxt(outfile, state, delimiter=',', fmt='%d')
-#    with open(
-#            settings_obj.parallel_run_dir + 'energy_%d_to_%d.csv' %
-#        (map_start, map_start + num_maps - 1), 'w') as outfile:
-#        np.savetxt(outfile, e, delimiter=',', fmt='%f')
-
-def generate_IR_map_regionwise(state,current_map):
-    eq_obj = construct_eqn()
-    settings_obj = T6_PSI_settings.load_obj()
-    
-    template_list = define_templates(settings_obj, generate_g=0)
-    max_drop = settings_obj.VDD * np.ones(len(state))
-    for y in range(settings_obj.NUM_REGIONS_Y):
-        for x in range(settings_obj.NUM_REGIONS_X):
-            n = y*settings_obj.NUM_REGIONS_Y + x
-            template = state[n]
-            regional_current, map_row = eq_obj.get_regional_current(
-                current_map, x, y)
-            template_obj = template_list[template]
-            g_start = template_obj.start
-            G = template_obj.G
-            J = eq_obj.create_J(regional_current, template_obj)
-            G, J = eq_obj.add_vdd_to_G_J(G, J, template_obj, 0)
-            J = sparse_mat.dok_matrix(J)
-            solution = eq_obj.solve_ir(G, J)
-            bot = g_start[0]    #M1 is shape -6
-            top = g_start[1]
-            V = solution[int(bot):int(top)]
-            dimx = template_list[template].num_x
-            dimy = template_list[template].num_y
-            max_drop[n] = max(settings_obj.VDD - V)
-            #print("region %d template %d"%(n,template))
-            V = V.reshape((dimx,dimy))
-            if x == 0:
-                V_row = V.T
-            else:
-                V_row = np.vstack((V_row, V.T))
-        if y == 0:
-            V_full = V_row
-        else:
-            V_full = np.hstack((V_full,V_row))
-#            if(n ==0 ):
-#                V_full = V.T
-#            else:
-#                V_full = np.vstack((V_full,V.T))
-#            J_map = J[int(bot):int(top)]
-#            J_map = J_map.todense()
-#            if(n ==0 ):
-#                J_full = J_map.T
-#            else:
-#                J_full = np.vstack((J_full,J_map.T))
-    wc_ir = max(max_drop)
-    img.imsave('./output/IR_map.png', V_full)
-    with open('./output/IR_drop.csv', 'wb') as outfile:
-        np.savetxt(outfile,(settings_obj.VDD-V_full),delimiter=',')
-    with open('./output/IR_drop.rpt','w') as outfile:
-        outfile.write("Worst case IR drop = %fV\n"%(wc_ir))
-        if wc_ir > settings_obj.IR_DROP_LIMIT:
-            outfile.write("Static IR drop specification VIOLATED")
-        else:
-            outfile.write("Static IR drop specification MET")
-#        with open('J_map.csv', 'w') as outfile:
-#            np.savetxt(outfile,J_full,delimiter=',')
-
-def generate_IR_map(state,current_map):
-    eq_obj = construct_eqn()
-    settings_obj = T6_PSI_settings.load_obj()
-    
-    template_list = define_templates(settings_obj, generate_g=0)
-    max_drop = settings_obj.VDD * np.ones(len(state))
-
-    s1 =time.time()
-    G,J, template_start = eq_obj.create_G_J (state, current_map,template_list)
-    e1 =time.time()
-    solution =eq_obj.solve_ir(G,J)
-    e2 =time.time()
-
-    print("INFO: Solving for static IR drop")
-    for n,template in enumerate(state):
-        g_start = template_list[template].start
-        dimx = template_list[template].num_x
-        dimy = template_list[template].num_y
-        #print("dim x y %d %d"%(dimx,dimy))
-        bot = g_start[0]    #M1 is shape -6
-        top = g_start[1]
-        V = solution[int(template_start[n]+bot):int(template_start[n]+top)]
-        max_drop[n] = max(settings_obj.VDD - V)
-        V = V.reshape((dimy,dimx))
-        if n % settings_obj.NUM_REGIONS_X == 0:
-            V_row = V.T
-            if settings_obj.NUM_REGIONS_X == 1:
-                if int(n / settings_obj.NUM_REGIONS_X) == 0:
-                    V_full = V_row
-                else:
-                    V_full = np.hstack((V_full,V_row))
-        elif n % settings_obj.NUM_REGIONS_X == settings_obj.NUM_REGIONS_X -1:
-            V_row = np.vstack((V_row, V.T))
-            if int(n / settings_obj.NUM_REGIONS_X) == 0:
-                V_full = V_row
-            else:
-                V_full = np.hstack((V_full,V_row))
-        else:
-            V_row = np.vstack((V_row, V.T))
-    print("INFO: Saving IR map report")
-    wc_ir = max(max_drop)
-    img.imsave('./output/IR_map.png', np.flipud(V_full.T))
-    with open('./output/IR_drop.csv', 'wb') as outfile:
-        np.savetxt(outfile,(settings_obj.VDD-V_full),delimiter=',')
-    with open('./output/IR_drop.rpt','w') as outfile:
-        outfile.write("Worst case IR drop = %fV\n"%(wc_ir))
-        if wc_ir > settings_obj.IR_DROP_LIMIT:
-            outfile.write("Static IR drop specification VIOLATED")
-        else:
-            outfile.write("Static IR drop specification MET")
-
-
-
-
-if __name__ == '__main__':
     settings_obj = T6_PSI_settings.load_obj()
     state = np.zeros((settings_obj.NUM_REGIONS_X,settings_obj.NUM_REGIONS_Y))
     with open(state_file, 'r') as infile:
         for line in infile:
-            #data = re.findall(r'Region x = (\d+) y = (\d+), template = (\d+)',line);
             data = re.findall(r'(\d+\.?\d*)\s+(\d+\.?\d*)\s+(\d+\.?\d*)\s+(\d+\.?\d*)\s+((?:\d+\.?\d*|\w+))\s*',line)
             data2 = [float(i) for i in data[0]]
-            #x,y,temp = data2
             x0,y0,x1,y1,temp =data2
-            #assert x<settings_obj.NUM_REGIONS_X and x>=0, (
-            #"Index x in template map.txt is not within the number of regions defined in template_definition.json ")
-            #assert y<settings_obj.NUM_REGIONS_Y and y>=0, (
-            #"Index y in template map.txt is not within the number of regions defined in template_definition.json ")
             x = int(x0/(settings_obj.WIDTH_REGION*1e6))
             y = int(y0/(settings_obj.LENGTH_REGION*1e6))
             state[x][y] = temp
@@ -231,6 +74,51 @@ if __name__ == '__main__':
     current_map = np.genfromtxt(current_map_file, delimiter=',')
     current_map = (current_map) / settings_obj.VDD
     #print(state)
-    generate_IR_map(state,current_map)
-    #generate_IR_map_regionwise(state,current_map)
+    #generate_IR_map(state,current_map)
+    generate_IR_map_regionwise(state,current_map)
+
+def generate_IR_map_regionwise(state,current_map):
+    eq_obj = construct_eqn()
+    settings_obj = T6_PSI_settings.load_obj()
+    
+    template_list = load_templates()
+    max_drop = settings_obj.VDD * np.ones(len(state))
+    voltage = np.zeros((0,3)) # location value tuple, (x,y,v)
+    for y in range(settings_obj.NUM_REGIONS_Y):
+        for x in range(settings_obj.NUM_REGIONS_X):
+            n = y*settings_obj.NUM_REGIONS_Y + x
+            template = state[n]
+            regional_current, map_row = eq_obj.get_regional_current(
+                current_map, x, y)
+            template_obj = template_list[template]
+            #g_start = template_obj.start
+            J = eq_obj.create_J(template_obj,regional_current)
+            #print(np.sum(J))
+            G_orig = template_obj.get_G_mat()
+            #print(G_orig.sum())
+            #pprint(G_orig.sum(axis=0).tolist())
+            #pprint(G_orig.sum(axis=1).tolist())
+            G, J = eq_obj.add_vdd_to_G_J(J, template_obj)
+            #pprint(G)
+            #print(G.sum())
+            J = sparse_mat.dok_matrix(J)
+            solution = eq_obj.solve_ir(G, J)
+            region_voltage = eq_obj.get_regional_voltage( template_obj, solution, x, y)
+            voltage = np.append(voltage, region_voltage,axis =0)
+            max_drop[n] = max(settings_obj.VDD - region_voltage.flatten())
+
+    wc_ir = max(max_drop)
+    #img.imsave('./output/IR_map.png', V_full)
+    IR_drop = voltage
+    IR_drop[:,2] = settings_obj.VDD - IR_drop[:,2]
+    with open('./output/IR_drop.csv', 'wb') as outfile:
+        np.savetxt(outfile,IR_drop,delimiter=',')
+    with open('./output/IR_drop.rpt','w') as outfile:
+        outfile.write("Worst case IR drop = %fV\n"%(wc_ir))
+        if wc_ir > settings_obj.IR_DROP_LIMIT:
+            outfile.write("Static IR drop specification VIOLATED")
+        else:
+            outfile.write("Static IR drop specification MET")
+
+if __name__ == '__main__':
     main()

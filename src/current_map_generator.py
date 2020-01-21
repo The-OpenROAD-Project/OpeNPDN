@@ -190,7 +190,7 @@ def main():
         sys.exit(-1)
 
     power_file = sys.argv[1]
-    if (len(sys.argv) == 3 and sys.argv[2] == "no_congestion"):
+    if (sys.argv[2] == "no_congestion"):
         congestion_enabled =0 
     else:
         congestion_enabled =1 

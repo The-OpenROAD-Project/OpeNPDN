@@ -7,7 +7,7 @@
     "num_per_run": 1  ,
     "validation_percent": 10  ,
     "test_percent": 10  ,
-    "current_scaling": 2,
+    "current_scaling": 1,
     "N_EPOCHS": 20,
     "step_size": 1e-7,
     "current_unit": 1e-3,
