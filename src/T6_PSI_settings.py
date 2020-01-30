@@ -69,10 +69,11 @@ class T6_PSI_settings():
         self.map_dir = self.work_dir + "input/current_maps/"
         self.parallel_run_dir = self.work_dir + "work/parallel_runs/"
         self.CNN_data_dir =  self.work_dir + "output/"
-        self.checkpoint_dir = checkpoint_dir +'/checkpoint_w_cong/'
+        self.checkpoint_dir = checkpoint_dir 
+        #self.checkpoint_dir = checkpoint_dir +'/checkpoint_w_cong/'
         self.checkpoint_file = 'power_grid_ckpt'
         self.normalization_file = 'normalization.json'
-        self.checkpoint_dir_wo_cong = checkpoint_dir +'/checkpoint_wo_cong/'
+        #self.checkpoint_dir_wo_cong = checkpoint_dir +'/checkpoint_wo_cong/'
 
         self.template_data = self.load_json(self.temp_json_file)
         self.config = self.load_json(self.conf_json_file)
@@ -87,12 +88,12 @@ class T6_PSI_settings():
         self.start_maps = self.config["start_maps"]
         self.validation_percent = self.config["validation_percent"]
         self.test_percent = self.config["test_percent"]
-        self.current_scale = self.config["current_scaling"]
         self.N_EPOCHS = self.config["N_EPOCHS"]
         self.max_current = self.config["max_current"]
         self.current_map_num_regions = self.config["current_map_num_regions"]
 
         stdcells_list = tcl_parser_obj.list_grid_stdcell()
+        self.template_names_list = stdcells_list
         temp0 = tcl_parser_obj.get_grid_stdcell(stdcells_list[0])
         chip = db.getChip()
         if mode == 'INFERENCE':
@@ -128,10 +129,11 @@ class T6_PSI_settings():
             self.TECH_LAYERS.append(layer_name)
             self.LAYERS[layer_name] = {}
             self.LAYERS[layer_name]['min_width'] = layer.getWidth() / self.lef_unit
-            self.LAYERS[layer_name]['via_res'] = self.template_data['layers'][layer_name]['via_res']
             self.LAYERS[layer_name]["width"] = 0 # default value? layer.getWidth() ?
             self.LAYERS[layer_name]['pitch'] = 0 # default value? layer.getPitch() ?
             self.LAYERS[layer_name]['t_spacing'] = layer.getPitch() / self.lef_unit
+
+            self.LAYERS[layer_name]['via_res'] = self.template_data['layers'][layer_name]['via_res']
             self.LAYERS[layer_name]['res'] = layer.getResistance()
             if layer.getDirection() == 'VERTICAL' or layer.getDirection() == 'V':
                 layer_dir = 'V'

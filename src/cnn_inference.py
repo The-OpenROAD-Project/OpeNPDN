@@ -65,16 +65,16 @@ class cnn_inference():
             self.congestion_enabled = 1 
         
         
-        if self.congestion_enabled ==1:
-            self.checkpoint_dir = self.settings_obj.checkpoint_dir
-        else:
-            self.checkpoint_dir = self.settings_obj.checkpoint_dir_wo_cong
-        normalization_file = self.checkpoint_dir+self.settings_obj.normalization_file
+        #if self.congestion_enabled ==1:
+        #    self.checkpoint_dir = self.settings_obj.checkpoint_dir
+        #else:
+        #    self.checkpoint_dir = self.settings_obj.checkpoint_dir_wo_cong
+        self.checkpoint_dir = self.settings_obj.checkpoint_dir
+        normalization_file = self.checkpoint_dir+'/'+self.settings_obj.normalization_file
         # Golden template numbers needed for comparison
         # This corresponds only to the first current map
         #indices = np.zeros((self.settings_obj.NUM_REGIONS_X * self.settings_obj.NUM_REGIONS_Y))
-        self.test_size = self.settings_obj.NUM_REGIONS_X * self.settings_obj.NUM_REGIONS_Y
-        # Hard coded after seeing training data, need to fix
+        #self.test_size = self.settings_obj.NUM_REGIONS_X * self.settings_obj.NUM_REGIONS_Y
         with open(normalization_file) as f:
             norm_data = json.load(f)
         min_cur = norm_data['currents']['min']
@@ -153,16 +153,17 @@ class cnn_inference():
                 size_region_x = (self.settings_obj.WIDTH_REGION * 1e6)
                 size_region_y = (self.settings_obj.LENGTH_REGION * 1e6)
                 with open(self.template_map_file,'w') as outfile:
-                    for y in range(self.settings_obj.NUM_REGIONS_Y):
-                        for x in range(self.settings_obj.NUM_REGIONS_X):
-                            x0 = x*size_region_x
-                            x1 = (x+1)*size_region_x
-                            y0 = y*size_region_y
-                            y1 = (y+1)*size_region_y
-                            #TODO update to real name
+                    for y in range(self.num_regions_y):
+                        for x in range(self.num_regions_x):
+                            x0 = self.x_offset + x*size_region_x
+                            x1 = x0 + size_region_x
+                            y0 = self.y_offset + y*size_region_y
+                            y1 = y0 + size_region_y
                             template = predict[region]
-                            outfile.write("%5.1f %5.1f %5.1f %5.1f %d\n"%(
-                                    x0,y0,x1,y1,template))
+                            #print(template)
+                            temp_name = self.settings_obj.template_names_list[template]
+                            outfile.write("%5.1f %5.1f %5.1f %5.1f %s\n"%(
+                                    x0,y0,x1,y1,temp_name))
                             region = region+1
     
     
@@ -180,65 +181,30 @@ class cnn_inference():
         self.settings_obj = T6_PSI_settings.load_obj()
         size_region_x = int(self.settings_obj.WIDTH_REGION * 1e6)
         size_region_y = int(self.settings_obj.LENGTH_REGION * 1e6)
-        curr_testcase = np.zeros(
-            (self.settings_obj.NUM_REGIONS_X * self.settings_obj.NUM_REGIONS_Y,
-             3*3*size_region_x * size_region_y))
-    #    cong_testcase = np.genfromtxt(congestion_map_file, delimiter=',')
         currents = np.genfromtxt(self.power_map_file, delimiter=',')
-        if self.congestion_enabled == 1:
-            cong_testcase = np.zeros((self.settings_obj.NUM_REGIONS_X * self.settings_obj.NUM_REGIONS_Y,3*3*size_region_x * size_region_y))
-            congestion = np.genfromtxt(self.cong_map_file, delimiter=',')
-        currents = (currents) / self.settings_obj.VDD
+        # TODO not handled if currents.shape[0] < size_region_x or
+        # currents.shape[1]<size_region_y
+        self.num_regions_x = int(currents.shape[0]/size_region_x)
+        self.num_regions_y = int(currents.shape[1]/size_region_y)
+
+        curr_testcase = np.zeros(
+            (self.num_regions_x * self.num_regions_y, size_region_x * size_region_y))
+    #    cong_testcase = np.genfromtxt(congestion_map_file, delimiter=',')
+        #if self.congestion_enabled == 1:
+        #    cong_testcase = np.zeros((self.settings_obj.NUM_REGIONS_X * self.settings_obj.NUM_REGIONS_Y,3*3*size_region_x * size_region_y))
+        #    congestion = np.genfromtxt(self.cong_map_file, delimiter=',')
+        self.x_offset = int((currents.shape[0]%size_region_x)/2)
+        self.y_offset = int((currents.shape[1]%size_region_y)/2)
         n=0
-        for y in range(self.settings_obj.NUM_REGIONS_Y):
-            for x in range(self.settings_obj.NUM_REGIONS_X):
-                current_region = np.zeros((3*size_region_x,3*size_region_y))
-                if self.congestion_enabled == 1:
-                    congestion_region = np.zeros((3*size_region_x,3*size_region_y))
+        for y in range(self.num_regions_y):
+            for x in range(self.num_regions_x):
+                current_region = np.zeros((size_region_x,size_region_y))
+                y_start = self.y_offset + y*size_region_y
+                y_end =  y_start+size_region_y
+                x_start = self.x_offset + x*size_region_x
+                x_end =  x_start+size_region_x
     
-                if  self.settings_obj.NUM_REGIONS_Y == 1:
-                    y_start = 0 
-                    y_end =  y_start+size_region_y
-                    y_reg_start = size_region_y
-                    y_reg_end =  y_reg_start+size_region_y
-                elif y == 0 :
-                    y_start = 0
-                    y_end =  y_start+2*size_region_y
-                    y_reg_start = size_region_y
-                    y_reg_end =  y_reg_start+2*size_region_y
-                elif y == self.settings_obj.NUM_REGIONS_Y-1:
-                    y_start = (y-1)*size_region_y
-                    y_end =  y_start+2*size_region_y
-                    y_reg_start = 0
-                    y_reg_end =  y_reg_start+2*size_region_y
-                else:
-                    y_start = (y-1)*size_region_y
-                    y_end =  y_start+3*size_region_y
-                    y_reg_start = 0
-                    y_reg_end =  y_reg_start+3*size_region_y
-                if  self.settings_obj.NUM_REGIONS_X == 1:
-                    x_start = 0 
-                    x_end =  x_start+size_region_x
-                    x_reg_start = size_region_x
-                    x_reg_end =  x_reg_start+size_region_x
-                elif x == 0 :
-                    x_start = 0
-                    x_end =  x_start+2*size_region_x
-                    x_reg_start = size_region_x
-                    x_reg_end =  x_reg_start+2*size_region_x
-                elif x == self.settings_obj.NUM_REGIONS_X-1:
-                    x_start = (x-1)*size_region_x
-                    x_end =  x_start+2*size_region_x
-                    x_reg_start = 0
-                    x_reg_end =  x_reg_start+2*size_region_x
-                else:
-                    x_start = (x-1)*size_region_x
-                    x_end =  x_start+3*size_region_x
-                    x_reg_start = 0
-                    x_reg_end =  x_reg_start+3*size_region_x
-    
-                current_region[x_reg_start:x_reg_end,y_reg_start:y_reg_end] = (
-                            currents[x_start:x_end,y_start:y_end])
+                current_region = currents[x_start:x_end,y_start:y_end]
                 curr_testcase[n] = current_region.reshape(-1)*self.scl_cur
     
                 if self.congestion_enabled == 1:
@@ -249,7 +215,7 @@ class cnn_inference():
                 else: 
                     cong_testcase = 0
                 n =n +1
-        template_testcase = np.zeros((self.test_size, self.cnn_input_obj.N_CLASSES))
+        template_testcase = np.zeros((n, self.cnn_input_obj.N_CLASSES))
         #for n, c in enumerate(self.cnn_input_obj.CLASSES):
         #    template_testcase[np.where(indices == c), n] = 1
     

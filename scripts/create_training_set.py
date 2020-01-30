@@ -19,7 +19,7 @@ chip_size_y = math.floor(settings_obj.current_map_num_regions*settings_obj.LENGT
 
 num_points = 1000;
 size_gauss = 1.5;
-scale = settings_obj.current_scale;
+scale = settings_obj.max_current;
 chip_size = np.mean([chip_size_x, chip_size_y],0)
 print("Generating random current maps for training ML model")
 end_map = start_map + num_maps
@@ -47,7 +47,10 @@ for t in tqdm(range(start_map,end_map)):
             cur_map = cur_map + np.reshape(F,(x2.shape[0], x1.shape[0]))
         else:
             cur_map = cur_map -np.reshape(F, (x2.shape[0], x1.shape[0]))
-    cur_map = (cur_map - min(cur_map.flatten()))*scale
+    min_cur_map = min(cur_map.flatten())
+    max_cur_map = max(cur_map.flatten())
+    cur_map = (1/(max_cur_map - min_cur_map))*(cur_map - min_cur_map)*scale
+    cur_map = cur_map/ settings_obj.VDD
     file_name =  "./input/current_maps/current_map_%d.csv"%(t)
     with open(file_name, 'wb') as outfile:
         np.savetxt(outfile, cur_map, delimiter=',')

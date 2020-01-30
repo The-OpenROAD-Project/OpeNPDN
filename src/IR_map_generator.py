@@ -59,20 +59,23 @@ state_file = "./output/template_map.txt"
 
 def main():
     settings_obj = T6_PSI_settings.load_obj()
-    state = np.zeros((settings_obj.NUM_REGIONS_X,settings_obj.NUM_REGIONS_Y))
+    template_names_list = settings_obj.template_names_list
+    state = [] 
     with open(state_file, 'r') as infile:
         for line in infile:
             data = re.findall(r'(\d+\.?\d*)\s+(\d+\.?\d*)\s+(\d+\.?\d*)\s+(\d+\.?\d*)\s+((?:\d+\.?\d*|\w+))\s*',line)
-            data2 = [float(i) for i in data[0]]
-            x0,y0,x1,y1,temp =data2
+            data2 = [float(data[0][i]) for i in range(len(data[0])-1)]
+            x0,y0,x1,y1 =data2
+            temp = data[0][4] 
+            if temp in template_names_list:
+                temp_num = template_names_list.index(temp)
+            else:
+                exit("error template name not found in database");
             x = int(x0/(settings_obj.WIDTH_REGION*1e6))
             y = int(y0/(settings_obj.LENGTH_REGION*1e6))
-            state[x][y] = temp
-    #state = np.zeros((settings_obj.NUM_REGIONS_Y,settings_obj.NUM_REGIONS_X))
-    state = state.reshape(settings_obj.NUM_REGIONS_X*settings_obj.NUM_REGIONS_Y)
-    state = state.astype(int)
+            val = [x0,x1,y0,y1,temp_num]
+            state.append(val)
     current_map = np.genfromtxt(current_map_file, delimiter=',')
-    current_map = (current_map) / settings_obj.VDD
     #print(state)
     #generate_IR_map(state,current_map)
     generate_IR_map_regionwise(state,current_map)
@@ -84,28 +87,28 @@ def generate_IR_map_regionwise(state,current_map):
     template_list = load_templates()
     max_drop = settings_obj.VDD * np.ones(len(state))
     voltage = np.zeros((0,3)) # location value tuple, (x,y,v)
-    for y in range(settings_obj.NUM_REGIONS_Y):
-        for x in range(settings_obj.NUM_REGIONS_X):
-            n = y*settings_obj.NUM_REGIONS_Y + x
-            template = state[n]
-            regional_current, map_row = eq_obj.get_regional_current(
-                current_map, x, y)
-            template_obj = template_list[template]
-            #g_start = template_obj.start
-            J = eq_obj.create_J(template_obj,regional_current)
-            #print(np.sum(J))
-            G_orig = template_obj.get_G_mat()
-            #print(G_orig.sum())
-            #pprint(G_orig.sum(axis=0).tolist())
-            #pprint(G_orig.sum(axis=1).tolist())
-            G, J = eq_obj.add_vdd_to_G_J(J, template_obj)
-            #pprint(G)
-            #print(G.sum())
-            J = sparse_mat.dok_matrix(J)
-            solution = eq_obj.solve_ir(G, J)
-            region_voltage = eq_obj.get_regional_voltage( template_obj, solution, x, y)
-            voltage = np.append(voltage, region_voltage,axis =0)
-            max_drop[n] = max(settings_obj.VDD - region_voltage.flatten())
+    for n,val in enumerate(state):
+        template = state[n][4]
+        x0,x1,y0,y1 = [int(i) for i in state[n][0:4]]
+        regional_current, map_row = eq_obj.get_regional_current_from_coordinates(
+            current_map, x0,x1,y0,y1)
+        template_obj = template_list[template]
+        #g_start = template_obj.start
+        J = eq_obj.create_J(template_obj,regional_current)
+        #print(np.sum(J))
+        G_orig = template_obj.get_G_mat()
+        #print(G_orig.sum())
+        #pprint(G_orig.sum(axis=0).tolist())
+        #pprint(G_orig.sum(axis=1).tolist())
+        G, J = eq_obj.add_vdd_to_G_J(J, template_obj)
+        #pprint(G)
+        #print(G.sum())
+        J = sparse_mat.dok_matrix(J)
+        solution = eq_obj.solve_ir(G, J)
+        region_voltage = eq_obj.get_regional_voltage_from_coordinates( 
+            template_obj, solution, x0,y0)
+        voltage = np.append(voltage, region_voltage,axis =0)
+        max_drop[n] = max(settings_obj.VDD - region_voltage.flatten())
 
     wc_ir = max(max_drop)
     #img.imsave('./output/IR_map.png', V_full)

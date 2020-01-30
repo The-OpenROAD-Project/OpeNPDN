@@ -25,7 +25,10 @@ colormap(jet(256))
 xlabel("Width")
 ylabel("Height")
 cb = colorbar;
-cb.Label.String = "IR drop(V)"
+cb.Label.String = "IR drop(V)";
 
 disp("max drop is: ")
 max(V(:,3))
+figure;
+J = csvread('work/current_map_processed.csv');
+surf(J','linestyle','none')

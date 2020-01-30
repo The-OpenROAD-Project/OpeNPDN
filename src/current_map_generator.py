@@ -182,7 +182,7 @@ def create_congest_map(settings_obj,congest_file,def_data):
 
 def main():
     print(len(sys.argv))
-    if len(sys.argv) != 3 and len(sys.argv) != 4 :
+    if len(sys.argv) != 4 and len(sys.argv) != 5 :
         print("ERROR Insufficient arguments")
         print(
             "Enter the full path names of the power report files and condition")
@@ -190,11 +190,12 @@ def main():
         sys.exit(-1)
 
     power_file = sys.argv[1]
-    if (sys.argv[2] == "no_congestion"):
+    DB_file = sys.argv[2]
+    if (sys.argv[3] == "no_congestion"):
         congestion_enabled =0 
     else:
         congestion_enabled =1 
-        congest_file = sys.argv[3]
+        congest_file = sys.argv[4]
     if not os.path.isfile(power_file):
         print("ERROR unable to find " + power_file)
         sys.exit(-1)
@@ -208,7 +209,7 @@ def main():
     odb = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(odb)
     db = odb.dbDatabase.create()
-    db = odb.odb_import_db(db, "./work/PDN.db")
+    db = odb.odb_import_db(db, DB_file)
     if db == None:
         exit("Import DB Failed")
 
@@ -233,8 +234,8 @@ def main():
 
     power_rep = read_power_report(power_file)
     power_map = create_power_map(settings_obj,db,power_rep)
-    power_map = power_map *100
-    print("WARNING: currents are scaled internally by a factor of 100")
+    #power_map = power_map *50
+    #print("WARNING: currents are scaled internally by a factor of 50")
     if congestion_enabled == 1:
         congest_map = create_congest_map(settings_obj,congest_file,cell_data)
     filtered_map = ndimage.uniform_filter(power_map, size=20, mode='mirror')

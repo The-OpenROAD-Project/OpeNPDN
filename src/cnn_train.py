@@ -47,6 +47,7 @@ import time
 from tqdm import tqdm
 import os
 import sys
+import numpy as np
 
 cnn_input_obj = cnn_input()
 cnn_obj = cnn()
@@ -65,10 +66,11 @@ def train(congestion_enabled):
     tf.logging.set_verbosity(tf.logging.ERROR)
     tf.reset_default_graph()
     #with tf.device("/gpu:0"):
-    if congestion_enabled == 1:
-        checkpoint_file = settings_obj.checkpoint_dir+settings_obj.checkpoint_file
-    else:
-        checkpoint_file = settings_obj.checkpoint_dir_wo_cong+settings_obj.checkpoint_file
+    #if congestion_enabled == 1:
+    #    checkpoint_file = settings_obj.checkpoint_dir+settings_obj.checkpoint_file
+    #else:
+    #    checkpoint_file = settings_obj.checkpoint_dir_wo_cong+settings_obj.checkpoint_file
+    checkpoint_file = settings_obj.checkpoint_dir+'/'+settings_obj.checkpoint_file
     sess = tf.Session(config=tf.ConfigProto(log_device_placement=True))
     tf.__version__sess = tf.Session(config=tf.ConfigProto(log_device_placement=True))
     with tf.Graph().as_default():
@@ -102,8 +104,8 @@ def train(congestion_enabled):
             start_time = time.time()
             initial_step = global_step.eval()
             start_read = time.time()
-            (curr_train, curr_valid, curr_test, cong_train, cong_valid,
-            cong_test,template_train, template_valid, template_test, num_train,
+            (curr_train, curr_valid, curr_test, 
+            template_train, template_valid, template_test, num_train,
             num_valid, num_test) = cnn_input_obj.load_and_preprocess_data(congestion_enabled)
             n_batches_train = int(num_train / cnn_obj.BATCH_SIZE)
             total_loss = 0.0
@@ -113,6 +115,8 @@ def train(congestion_enabled):
             epoch_num = 1
             start_train = time.time()
             correct_preds_train =0
+            total_logits = np.zeros((cnn_input_obj.N_CLASSES))
+            total_logits_batch =  np.zeros((cnn_input_obj.N_CLASSES))   
             for epcoh_num in tqdm(range(N_EPOCHS),desc='EPOCH NUM', total=N_EPOCHS):
                 for trn_bat in range(0, n_batches_train ):
                     index = initial_step+epoch_num*n_batches_train+trn_bat
@@ -120,18 +124,21 @@ def train(congestion_enabled):
                     Y_batch = template_train[trn_btch_str:trn_btch_end, :]
                     if(congestion_enabled ==1):
                         C_batch = cong_train[trn_btch_str:trn_btch_end, :]
-                        correct_preds_batch,_, loss_batch = sess.run([accuracy,optimizer, loss],
+                        correct_preds_batch,_, loss_batch,logits_batch = sess.run([accuracy,optimizer, loss, logits ],
                                          feed_dict={
                                              maps: X_batch,
                                              cong: C_batch,
                                              labels: Y_batch
                                              })
                     else:
-                        correct_preds_batch,_, loss_batch = sess.run([accuracy,optimizer, loss],
+                        correct_preds_batch,_, loss_batch,logits_batch = sess.run([accuracy,optimizer, loss, logits],
                                          feed_dict={
                                              maps: X_batch,
                                              labels: Y_batch
                                              })
+                    logits_arg = np.argmax(logits_batch,axis=1)
+                    for i in range(cnn_input_obj.N_CLASSES): 
+                        total_logits[i] += np.count_nonzero(logits_arg==i)
                     total_loss += loss_batch
                     total_loss10 += loss_batch
 
@@ -145,9 +152,12 @@ def train(congestion_enabled):
                         print("epoch_num: %d elapsed_time = %f"%(int(index/n_batches_train) ,time.time()-start_time))
                         print('Average loss at step {}: {:5.5f}'.format(
                             index + 1, total_loss / SKIP_STEP))
+                        print("Predicted template distribution")
+                        print(total_logits)
                         total_loss = 0.0
                         train_acc = 100*correct_preds_train/(cnn_obj.BATCH_SIZE*SKIP_STEP)
                         correct_preds_train =0
+                        total_logits = np.zeros((cnn_input_obj.N_CLASSES))
                         print("training Accuracy {0}".format(train_acc))
 
                         X_batch = curr_valid[0:num_valid, :]

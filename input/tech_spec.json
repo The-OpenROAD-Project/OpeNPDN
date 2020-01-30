@@ -9,34 +9,44 @@
     },
     "layers": {
         "metal1": {
-            "via_res": 5.0
+            "via_res": 5.0,
+            "res": 0.38
         },
         "metal2": {
-            "via_res": 5.0
+            "via_res": 5.0,
+            "res": 0.25
         },
         "metal3": {
-            "via_res": 5.0
+            "via_res": 5.0,
+            "res": 0.25
         },
         "metal4": {
-            "via_res": 3.0
+            "via_res": 3.0,
+            "res": 0.21
         },
         "metal5": {
-            "via_res": 3.0
+            "via_res": 3.0,
+            "res": 0.21
         },
         "metal6": {
-            "via_res": 3.0
+            "via_res": 3.0,
+            "res": 0.21
         },
         "metal7": {
-            "via_res": 1.0
+            "via_res": 1.0,
+            "res": 0.075
         },
         "metal8": {
-            "via_res": 1.0
+            "via_res": 1.0,
+            "res": 0.075
         },
         "metal9": {
-            "via_res": 0.5
+            "via_res": 0.5,
+            "res": 0.03
         },
         "metal10": {
-            "via_res": 0.5
+            "via_res": 0.5,
+            "res": 0.03
         }
     }
 }

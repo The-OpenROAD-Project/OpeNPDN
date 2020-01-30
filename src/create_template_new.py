@@ -375,7 +375,7 @@ def load_templates():
     template_list = []
     settings_obj = T6_PSI_settings.load_obj()
     for temp_num in range(settings_obj.NUM_TEMPLATES):
-        print("Loading Template %d " % temp_num)
+        #print("Loading Template %d " % temp_num)
         dirname = settings_obj.template_file
         fname = dirname + "/template_obj_%d.pkl" % temp_num
         with open(fname, 'rb') as template_file:

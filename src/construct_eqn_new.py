@@ -95,14 +95,18 @@ class construct_eqn():
     def get_regional_voltage(self, template_obj,V, ind_x, ind_y):
         xcor = int((ind_x * self.WIDTH_REGION))
         ycor = int((ind_y * self.LENGTH_REGION))
+        return self.get_regional_voltage_from_coordinates(template_obj,V,xcor,ycor)
+
+
+    def get_regional_voltage_from_coordinates(self, template_obj,V, xcor, ycor):
         region_voltage = np.zeros((0, 3))
         for i in range(V.shape[0]- self.c4_bump_loc.shape[0]):
             node_h = template_obj.get_node_from_loc(i)
             if node_h.get_layer() == 0:
                 l,x,y = node_h.get_loc()
                 voltage_set = np.zeros((1,3))
-                voltage_set[0,0] = (x+xcor)/self.settings_obj.lef_unit
-                voltage_set[0,1] = (y+ycor)/self.settings_obj.lef_unit
+                voltage_set[0,0] = xcor*1e-6 + x/self.settings_obj.lef_unit
+                voltage_set[0,1] = ycor*1e-6 + y/self.settings_obj.lef_unit
                 voltage_set[0,2] = V[i]
                 region_voltage = np.append(region_voltage,voltage_set,axis=0)
         return region_voltage
@@ -123,6 +127,20 @@ class construct_eqn():
         ycor = int((ind_y * self.size_region_y))
         end_xcor = int(xcor + self.size_region_x)
         end_ycor = int(ycor + self.size_region_y)
+        return self.get_regional_current_from_coordinates(chip_current, xcor,end_xcor, ycor, end_ycor)
+
+    def get_regional_current_from_coordinates(self, chip_current, xcor, end_xcor, ycor, end_ycor):
+        """ Extracts current on a regional basis from chip current
+        Args:
+            chip_current: Current of the entire chip from current map
+            ind_x: Index in X direction for regional current extraction
+            ind_y: Index in Y direction for regional current extraction
+        Returns:
+            region_current: A 2D matrix which represents the current map for a
+                            region
+            current_row: A 1D row vector representing the current map of region
+                         to save into data format needed for ML model
+        """
         current_dis = chip_current[xcor:end_xcor, ycor:end_ycor]
         current_row = current_dis.reshape(-1)
         k = 0
@@ -138,6 +156,7 @@ class construct_eqn():
                 region_current[k, 2] = current_dis[i, j]
                 k = k + 1
         return region_current, current_row
+
 
 
     def create_J(self,template_obj, regional_cur):
