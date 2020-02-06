@@ -2,7 +2,6 @@ SHELL = bash
 PC=python3
 DEF_FILE= /home/sachin00/chhab011/tmp/OpenROAD/src/OpeNPDN/test/aes/aes.def
 POW_FILE= ./data/power_instance.rpt
-DB_FILE= ./data/PDN.db
 #/home/sachin00/chhab011/tmp/OpenROAD/src/OpeNPDN/test/aes/aes.pwr.rpt
 LEF_FILE= "./platforms/nangate45/NangateOpenCellLibrary.mod.lef"
 CONGEST_RPT= ""
@@ -83,11 +82,12 @@ build:
 	echo "****************************************************************"
 
 all:
-	rm -rf ./work &&\
+	rm -rf ./work ./templates &&\
 	mkdir -p work &&\
 	mkdir -p templates &&\
 	mkdir -p work/parallel_runs &&\
 	mkdir -p input/current_maps &&\
+	mkdir -p checkpoints &&\
 	echo "****************************************************************" &&\
 	echo "************* Creating the defined templates *******************" &&\
 	echo "****************************************************************" &&\
@@ -100,7 +100,7 @@ all:
 	echo "****************************************************************" &&\
 	echo "*** Running simulated annealing for training data collection ***" &&\
 	echo "****************************************************************" &&\
-	$(PC) ./scripts/run_batch_iterative.py ${CONGESTION_COMMAND} &&\
+	$(PC) ./src/generate_training_data_iterative.py ${CONGESTION_COMMAND} &&\
 	echo "****************************************************************" &&\
 	echo "***************** Simulated annealing completed ****************" &&\
 	echo "****************************************************************" &&\
@@ -129,7 +129,6 @@ training_set:
 	mkdir -p templates &&\
 	mkdir -p work/parallel_runs &&\
 	mkdir -p input/current_maps &&\
-	mkdir -p templates &&\
 	mkdir -p checkpoints &&\
 	$(PC) ./src/T6_PSI_settings.py ${ODB_LOC} ${CHECKPOINT_DIR} ${MODE} ${LEF_FILE} &&\
 	$(PC) ./scripts/create_training_set.py 
@@ -145,7 +144,6 @@ data_and_train:
 	mkdir -p templates &&\
 	mkdir -p work/parallel_runs &&\
 	mkdir -p input/current_maps &&\
-	mkdir -p templates &&\
 	mkdir -p checkpoints &&\
 	$(PC) ./src/T6_PSI_settings.py ${ODB_LOC} ${CHECKPOINT_DIR} ${MODE} ${LEF_FILE} &&\
 	$(PC) ./scripts/create_training_set.py &&\
