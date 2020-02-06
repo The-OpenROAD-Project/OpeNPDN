@@ -133,8 +133,19 @@ class T6_PSI_settings():
             self.LAYERS[layer_name]['pitch'] = 0 # default value? layer.getPitch() ?
             self.LAYERS[layer_name]['t_spacing'] = layer.getPitch() / self.lef_unit
 
-            self.LAYERS[layer_name]['via_res'] = self.template_data['layers'][layer_name]['via_res']
-            self.LAYERS[layer_name]['res'] = layer.getResistance()
+            layer_res = layer.getResistance()
+            if(layer_res <=1e-2):
+                self.LAYERS[layer_name]['res'] = self.template_data['layers'][str(layer_num)]['res']
+            else:
+                self.LAYERS[layer_name]['res'] = layer.getResistance()
+            #print(layer.getResistance())
+            via_layer = layer.getUpperLayer()
+            via_res = self.template_data['layers'][str(layer_num)]['via_res']
+            if(via_layer != None):
+                if(via_layer.getResistance() >=1e-2):
+                    via_res =via_layer.getResistance() 
+            self.LAYERS[layer_name]['via_res'] = via_res
+
             if layer.getDirection() == 'VERTICAL' or layer.getDirection() == 'V':
                 layer_dir = 'V'
             elif layer.getDirection() == 'HORIZONTAL' or layer.getDirection() == 'H':

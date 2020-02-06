@@ -119,6 +119,7 @@ def create_power_map(settings_obj, db, power_rep):
     width = int(width)
     height = int(height)
     power_map = np.zeros((width * 10, height * 10))
+    macro = np.zeros((width * 10, height * 10),dtype =int)
     number_of_cells_wo_power=0
     for  inst in insts:
         bbox = inst.getBBox()
@@ -135,12 +136,41 @@ def create_power_map(settings_obj, db, power_rep):
             power_map[ll_x:ur_x, ll_y:ur_y] = 0
         else:
             inst_name = inst.getName()
+            if( "macro" in inst_name.lower()):
+               macro[ll_x:ur_x, ll_y:ur_y] =1
+
             if inst_name in power_rep:
                 power_map[ll_x:ur_x, ll_y:ur_y] = (power_map[ll_x:ur_x, ll_y:ur_y] +
-                power_rep[inst_name]['total_power']/ area)
+                    power_rep[inst_name]['total_power']/ area)
             else:
                 print("Warning: instance %s not found in power report"%(inst_name))
                 number_of_cells_wo_power = number_of_cells_wo_power + 1
+    size_x = settings_obj.WIDTH_REGION*1e6
+    size_y = settings_obj.LENGTH_REGION*1e6
+    offset_x = int((width%size_x)/2)
+    offset_y = int((height%size_y)/2)
+    for y in range(int(height/size_y)):
+        for x in range(int(width/size_x)):
+            ll_x = int(offset_x + x*size_x)*10
+            ll_y = int(offset_y + y*size_y)*10
+            ur_x = int(ll_x + size_x*10) 
+            ur_y = int(ll_y + size_y*10)
+            power_map_region =  power_map[ll_x:ur_x, ll_y:ur_y]
+            macro_region =  macro[ll_x:ur_x, ll_y:ur_y]
+            std_cell_area = np.sum(macro_region == 0)
+            macro_area = np.sum(macro_region == 1)
+            if std_cell_area >0:
+                std_cell_avg_power = np.sum( power_map_region[macro_region == 0])/std_cell_area
+            else:
+                std_cell_avg_power = 0
+            if macro_area >0:
+                macro_avg_power = np.sum( power_map_region[macro_region == 1])/macro_area
+            else:
+                macro_avg_power = 0
+            if std_cell_avg_power > macro_avg_power:
+                power_map_region[macro_region == 1] = std_cell_avg_power
+            power_map[ll_x:ur_x, ll_y:ur_y] = power_map_region
+
     print("Number of cells without power = %d" % number_of_cells_wo_power)
     power_map_um = power_map.reshape(width, 10, height, 10).sum((1, 3))
     return power_map_um
@@ -182,7 +212,7 @@ def create_congest_map(settings_obj,congest_file,def_data):
 
 def main():
     print(len(sys.argv))
-    if len(sys.argv) != 4 and len(sys.argv) != 5 :
+    if len(sys.argv) != 5 and len(sys.argv) != 6 :
         print("ERROR Insufficient arguments")
         print(
             "Enter the full path names of the power report files and condition")
@@ -190,12 +220,13 @@ def main():
         sys.exit(-1)
 
     power_file = sys.argv[1]
-    DB_file = sys.argv[2]
-    if (sys.argv[3] == "no_congestion"):
+    LEF_file = sys.argv[2]
+    DEF_file = sys.argv[3]
+    if (sys.argv[4] == "no_congestion"):
         congestion_enabled =0 
     else:
         congestion_enabled =1 
-        congest_file = sys.argv[4]
+        congest_file = sys.argv[5]
     if not os.path.isfile(power_file):
         print("ERROR unable to find " + power_file)
         sys.exit(-1)
@@ -209,28 +240,15 @@ def main():
     odb = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(odb)
     db = odb.dbDatabase.create()
-    db = odb.odb_import_db(db, DB_file)
+    chip = odb.odb_read_design(db, [LEF_file], [DEF_file])
+    #db = odb.odb_import_db(db, DB_file)
     if db == None:
         exit("Import DB Failed")
 
 
-    chip = db.getChip()
+    #chip = db.getChip()
     block = chip.getBlock()
     unit_micron = 1/block.getDefUnits()
-
-    die_area = block.getDieArea()
-    size_x = abs(die_area.xMax() - die_area.xMin())*unit_micron 
-    size_y = abs(die_area.yMax() - die_area.yMin())*unit_micron 
-    chip_width = settings_obj.WIDTH_REGION*settings_obj.NUM_REGIONS_X*1e6
-    chip_length = settings_obj.LENGTH_REGION*settings_obj.NUM_REGIONS_Y*1e6
-    
-    #if (abs(size_x - chip_width) > settings_obj.LENGTH_REGION*1e6 or
-    #    abs(size_y - chip_length) > settings_obj.LENGTH_REGION*1e6 ):
-    #    print("ERROR: Area obtained from the DEF does not match the \
-    #    template definition json file. Ensure the region sizes and \
-    #    number of regions are defined appropriately")
-    #    print("def x %f y %f json x %f y%f"%(size_x,size_y,chip_width,chip_length))
-    #    exit(-1)
 
     power_rep = read_power_report(power_file)
     power_map = create_power_map(settings_obj,db,power_rep)

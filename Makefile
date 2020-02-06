@@ -46,7 +46,7 @@ templates:
 	$(PC) ./src/create_template_new.py 
 
 parse_inputs:
-	$(PC) ./src/current_map_generator.py ${POW_FILE} ${DB_FILE} ${CONGESTION_COMMAND} ${CONGEST_RPT} 
+	$(PC) ./src/current_map_generator.py ${POW_FILE} ${LEF_FILE}  ${DEF_FILE} ${CONGESTION_COMMAND} ${CONGEST_RPT}
 
 predict:
 	$(PC) ./src/cnn_inference.py ${CONGESTION_COMMAND}
@@ -111,7 +111,7 @@ all:
 	echo "****************************************************************" &&\
 	echo "************* Creating the testcase current map ****************" &&\
 	echo "****************************************************************" &&\
-	$(PC) ./src/current_map_generator.py ${POW_FILE} ${DB_FILE} ${CONGESTION_COMMAND} ${CONGEST_RPT} &&\
+	$(PC) ./src/current_map_generator.py ${POW_FILE} ${LEF_FILE}  ${DEF_FILE} ${CONGESTION_COMMAND} ${CONGEST_RPT} &&\
 	echo "****************************************************************" &&\
 	echo "***************** Using CNN to synthesize PDN ******************" &&\
 	echo "****************************************************************" &&\
@@ -158,13 +158,13 @@ train:
 
 inference:
 	mkdir -p work &&\
-	$(PC) ./src/current_map_generator.py ${POW_FILE} ${DB_FILE} ${CONGESTION_COMMAND} ${CONGEST_RPT} && \
+	$(PC) ./src/current_map_generator.py ${POW_FILE} ${LEF_FILE}  ${DEF_FILE} ${CONGESTION_COMMAND} ${CONGEST_RPT} &&\
 	$(PC) ./src/cnn_inference.py ${CONGESTION_COMMAND} && \
 	$(PC) ./src/IR_map_generator.py
 
 get_ir:
 	mkdir -p work &&\
-	$(PC) ./src/current_map_generator.py ${POW_FILE} ${DB_FILE} ${CONGESTION_COMMAND} ${CONGEST_RPT} &&\
+	$(PC) ./src/current_map_generator.py ${POW_FILE} ${LEF_FILE}  ${DEF_FILE} ${CONGESTION_COMMAND} ${CONGEST_RPT} &&\
 	$(PC) ./src/IR_map_generator.py
 
 test:

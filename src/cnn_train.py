@@ -53,8 +53,8 @@ cnn_input_obj = cnn_input()
 cnn_obj = cnn()
 settings_obj = T6_PSI_settings.load_obj()
 N_EPOCHS = settings_obj.N_EPOCHS
-SKIP_STEP = 10 * 512 / cnn_obj.BATCH_SIZE
-SAVE_STEP = 30 * 512 / cnn_obj.BATCH_SIZE
+SKIP_STEP = 50  
+SAVE_STEP = 250  
 save_model = True
 
 
@@ -117,9 +117,10 @@ def train(congestion_enabled):
             correct_preds_train =0
             total_logits = np.zeros((cnn_input_obj.N_CLASSES))
             total_logits_batch =  np.zeros((cnn_input_obj.N_CLASSES))   
-            for epcoh_num in tqdm(range(N_EPOCHS),desc='EPOCH NUM', total=N_EPOCHS):
+            index = 0 
+            for epoch_num in tqdm(range(N_EPOCHS),desc='EPOCH NUM', total=N_EPOCHS):
                 for trn_bat in range(0, n_batches_train ):
-                    index = initial_step+epoch_num*n_batches_train+trn_bat
+                    index = index+1
                     X_batch = curr_train[trn_btch_str:trn_btch_end, :]
                     Y_batch = template_train[trn_btch_str:trn_btch_end, :]
                     if(congestion_enabled ==1):
@@ -144,12 +145,12 @@ def train(congestion_enabled):
 
                     correct_preds_train = correct_preds_batch + correct_preds_train
                     if (index + 1) % 10 == 0:
-                        print("epoch_num: %d elapsed_time = %f"%(int(index/n_batches_train) ,time.time()-start_time))
+                        print("epoch_num: %d elapsed_time = %f"%(epoch_num ,time.time()-start_time))
                         print('Average loss at step {}: {:5.5f}'.format(
                             index + 1, total_loss10 / 10))
                         total_loss10 = 0.0
                     if (index + 1) % SKIP_STEP == 0:
-                        print("epoch_num: %d elapsed_time = %f"%(int(index/n_batches_train) ,time.time()-start_time))
+                        print("epoch_num: %d elapsed_time = %f"%(epoch_num ,time.time()-start_time))
                         print('Average loss at step {}: {:5.5f}'.format(
                             index + 1, total_loss / SKIP_STEP))
                         print("Predicted template distribution")
@@ -171,19 +172,25 @@ def train(congestion_enabled):
                                                             labels: Y_batch
                                                         })
                         else:
-                            correct_preds_batch, = sess.run([accuracy],
+                            correct_preds_batch,logits_batch = sess.run([accuracy,logits],
                                                         feed_dict={
                                                             maps: X_batch,
                                                             labels: Y_batch
                                                         })
+                        logits_valid = np.zeros((cnn_input_obj.N_CLASSES))
+                        logits_arg = np.argmax(logits_batch,axis=1)
+                        for i in range(cnn_input_obj.N_CLASSES): 
+                            logits_valid[i] = np.count_nonzero(logits_arg==i)
                         valid_acc = 100 * correct_preds_batch / num_valid
                         print("Validation Accuracy {0}".format(valid_acc))
+                        print("Predicted template distribution")
+                        print(logits_valid)
 
                     if ((index + 1) % SAVE_STEP == 0 and save_model == True):
                         print("SAVING CHECKPOINT")
                         saver.save(sess, checkpoint_file, index)
-                    trn_btch_str, trn_btch_end, epoch_num = get_next_batch(
-                        trn_btch_str, trn_btch_end, epoch_num, num_train)
+                    trn_btch_str, trn_btch_end = get_next_batch(
+                        trn_btch_str, trn_btch_end, num_train)
             print("Optimization Finished!")
             print("SAVING CHECKPOINT")
             saver.save(sess, checkpoint_file, index)
@@ -208,16 +215,13 @@ def train(congestion_enabled):
 
 
 
-def get_next_batch(trn_btch_str, trn_btch_end, epoch_num, num_train):
+def get_next_batch(trn_btch_str, trn_btch_end,  num_train):
     trn_btch_str = trn_btch_end - 1
     trn_btch_end = trn_btch_str + cnn_obj.BATCH_SIZE
     if trn_btch_end > num_train:
         trn_btch_str = 0
         trn_btch_end = trn_btch_str + cnn_obj.BATCH_SIZE
-        epoch_num += 1
-        if epoch_num % 5 == 0:
-            epoch_num += 5
-    return trn_btch_str, trn_btch_end, epoch_num
+    return trn_btch_str, trn_btch_end
 
 
 if __name__ == "__main__":
