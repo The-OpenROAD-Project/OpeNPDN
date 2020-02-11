@@ -39,11 +39,11 @@ This is the main code that runs simulated annleaing to decide the templates
 
 import sys
 import numpy as np
-from create_template_new import load_templates
-from create_template_new import template
-from create_template_new import node
+from create_template import load_templates
+from create_template import template
+from create_template import node
 from T6_PSI_settings import T6_PSI_settings
-from construct_eqn_new import construct_eqn
+from construct_eqn import construct_eqn
 from scipy import sparse as sparse_mat
 import matplotlib.image as img
 import math
@@ -108,12 +108,11 @@ def generate_IR_map_regionwise(state,current_map):
         region_voltage = eq_obj.get_regional_voltage_from_coordinates( 
             template_obj, solution, x0,y0)
         voltage = np.append(voltage, region_voltage,axis =0)
-        max_drop[n] = max(settings_obj.VDD - region_voltage.flatten())
 
-    wc_ir = max(max_drop)
     #img.imsave('./output/IR_map.png', V_full)
     IR_drop = voltage
     IR_drop[:,2] = settings_obj.VDD - IR_drop[:,2]
+    wc_ir = max(IR_drop[:,2])
     with open('./output/IR_drop.csv', 'wb') as outfile:
         np.savetxt(outfile,IR_drop,delimiter=',')
     with open('./output/IR_drop.rpt','w') as outfile:

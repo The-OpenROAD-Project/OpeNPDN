@@ -2,47 +2,45 @@
     "property": {
         "VDD": 1.1,
         "IR_DROP_LIMIT": 0.010,
-        "NUM_REGIONS_X": 1,
-        "NUM_REGIONS_Y": 1,
         "SIZE_REGION_X": 100,
         "SIZE_REGION_Y": 100
     },
     "layers": {
         "1": {
-            "via_res": 5.0,
-            "res": 0.38
+            "via_res": 4.0,
+            "res": 0.28
         },
         "2": {
-            "via_res": 5.0,
-            "res": 0.25
+            "via_res": 4.0,
+            "res": 0.15
         },
         "3": {
-            "via_res": 5.0,
-            "res": 0.25
+            "via_res": 4.0,
+            "res": 0.15
         },
         "4": {
-            "via_res": 3.0,
-            "res": 0.21
+            "via_res": 2.0,
+            "res": 0.11
         },
         "5": {
-            "via_res": 3.0,
-            "res": 0.21
+            "via_res": 2.0,
+            "res": 0.11
         },
         "6": {
-            "via_res": 3.0,
-            "res": 0.21
+            "via_res": 2.0,
+            "res": 0.11
         },
         "7": {
             "via_res": 1.0,
-            "res": 0.075
+            "res": 0.065
         },
         "8": {
             "via_res": 1.0,
-            "res": 0.075
+            "res": 0.065
         },
         "9": {
             "via_res": 0.5,
-            "res": 0.03
+            "res": 0.02
         },
         "10": {
             "via_res": 0.5,

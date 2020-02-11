@@ -50,7 +50,7 @@ from pprint import pprint
 
 class T6_PSI_settings():
 
-    def __init__(self,db,ODB_LOC,checkpoint_dir,mode):
+    def __init__(self, db, ODB_LOC, checkpoint_dir, temp_tcl_file, temp_json_file, conf_json_file):
         
         self.ODB_loc = ODB_LOC
         tech = db.getTech()
@@ -58,9 +58,9 @@ class T6_PSI_settings():
         layers = tech.getLayers()
 
         self.work_dir = "./"
-        self.temp_tcl_file =  self.work_dir + "input/PDN.cfg"
-        self.temp_json_file = self.work_dir + "input/tech_spec.json"
-        self.conf_json_file = self.work_dir + "input/tool_config.json"
+        self.temp_tcl_file =   temp_tcl_file
+        self.temp_json_file =  temp_json_file
+        self.conf_json_file =  conf_json_file
         self.template_file = self.work_dir + "templates"
         self.cur_map_file = self.work_dir + "output/current_map.csv"
         self.cong_map_file = self.work_dir + "output/congestion_map.csv"
@@ -82,8 +82,6 @@ class T6_PSI_settings():
 
         self.NUM_VDD = self.config["num_vdd_per_region"]
         self.current_unit = self.config["current_unit"]
-        self.num_parallel_runs = self.config["num_parallel_runs"]
-        self.num_per_run = self.config["num_per_run"]
         self.num_maps = self.config["num_maps"]
         self.start_maps = self.config["start_maps"]
         self.validation_percent = self.config["validation_percent"]
@@ -96,16 +94,8 @@ class T6_PSI_settings():
         self.template_names_list = stdcells_list
         temp0 = tcl_parser_obj.get_grid_stdcell(stdcells_list[0])
         chip = db.getChip()
-        if mode == 'INFERENCE':
-            block = chip.getBlock()
-            unit_micron = 1/block.getDefUnits()
-
-            die_area = block.getDieArea()
-            size_x = abs(die_area.xMax() - die_area.xMin())*unit_micron 
-            size_y = abs(die_area.yMax() - die_area.yMin())*unit_micron 
-        else:
-            size_x = self.template_data['property']['SIZE_REGION_X']
-            size_y = self.template_data['property']['SIZE_REGION_Y']
+        size_x = self.template_data['property']['SIZE_REGION_X']
+        size_y = self.template_data['property']['SIZE_REGION_Y']
         size_x *= 1e3
         size_y *= 1e3
         size_x =round(size_x)*1e-9 
@@ -114,10 +104,6 @@ class T6_PSI_settings():
         self.LENGTH_REGION = size_y
         self.NUM_TEMPLATES = len(stdcells_list)
         self.PDN_layers_ids = temp0.list_layers()
-
-        self.NUM_REGIONS_X = self.template_data['property']['NUM_REGIONS_X']
-        self.NUM_REGIONS_Y = self.template_data['property']['NUM_REGIONS_Y']
-        self.NUM_REGIONS = self.NUM_REGIONS_X * self.NUM_REGIONS_Y
 
         self.LAYERS = {}
         self.TECH_LAYERS =[]
@@ -178,7 +164,6 @@ class T6_PSI_settings():
             self.LAYERS[layer_name]['pitch'] = pitches
         #pprint(self.LAYERS)        
         self.VDD = self.template_data['property']['VDD']
-        self.n_c4 = self.NUM_VDD * self.NUM_REGIONS_X * self.NUM_REGIONS_Y
         self.IR_DROP_LIMIT = self.template_data['property']['IR_DROP_LIMIT']
 
         self.NUM_PDN_LAYERS = len(self.PDN_layers_ids)
@@ -376,42 +361,26 @@ class metal_layer():
 
         
 if __name__ == '__main__':
-    if(len(sys.argv) != 4 and len(sys.argv) != 5):
+    if(len(sys.argv) != 7 ):
         print("ERROR: Settings requires either 4 or 5 input arguments")
         sys.exit(-1)
     odb_loc = sys.argv[1]  
     checkpoint_dir = sys.argv[2]  
-    mode = sys.argv[3]  
-    if mode == 'TRAIN':
-        if len(sys.argv) != 5:
-            print("ERROR: Training mode requires atleast 4 input arguments")
-        print("OpeNPDN Training Mode:")
-        lef_list = sys.argv[4]  
-        lef_files = lef_list.split();
-        for i in range(len(lef_files)):
-            if not os.path.isfile(lef_files[i]):
-                print("ERROR unable to find " + lef_files[i])
-                sys.exit(-1)
-        spec = importlib.util.spec_from_file_location("opendbpy",odb_loc )
-        odb = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(odb)
-        db = odb.dbDatabase.create()
-        odb.odb_read_lef(db,lef_files)
-    elif mode == 'INFERENCE':
-        print("OpeNPDN Inference Mode:")
-        spec = importlib.util.spec_from_file_location("opendbpy",odb_loc )
-        odb = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(odb)
-        db = odb.dbDatabase.create()
-        db = odb.odb_import_db(db, "./work/PDN.db")
-        if db == None:
-            exit("Import DB Failed, check work/PDN.db")
-
-    else:  
-        print("MODE not recognize, possible inputs are \'TRAIN\' or \'INFERENCE\'")
-        exit(-1)
-
-    obj = T6_PSI_settings(db,odb_loc,checkpoint_dir,mode)
+    lef_list = sys.argv[3]  
+    lef_files = lef_list.split();
+    for i in range(len(lef_files)):
+        if not os.path.isfile(lef_files[i]):
+            print("ERROR unable to find " + lef_files[i])
+            sys.exit(-1)
+    spec = importlib.util.spec_from_file_location("opendbpy",odb_loc )
+    odb = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(odb)
+    db = odb.dbDatabase.create()
+    odb.odb_read_lef(db,lef_files)
+    temp_tcl_file = sys.argv[4]
+    conf_json_file = sys.argv[5]
+    temp_json_file = sys.argv[6]
+    obj = T6_PSI_settings(db,odb_loc,checkpoint_dir,temp_tcl_file, temp_json_file, conf_json_file)
     filehandler = open(obj.work_dir+"work/T6_PSI_settings.obj","wb")
     pickle.dump(obj,filehandler)
     filehandler.close()

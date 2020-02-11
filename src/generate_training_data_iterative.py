@@ -2,10 +2,10 @@ import sys
 import numpy as np
 from T6_PSI_settings import T6_PSI_settings
 import random
-from create_template_new import load_templates
-from create_template_new import template
-from create_template_new import node
-from construct_eqn_new import construct_eqn
+from create_template import load_templates
+from create_template import template
+from create_template import node
+from construct_eqn import construct_eqn
 from scipy import sparse as sparse_mat
 from pprint import pprint
 from tqdm import tqdm
@@ -78,8 +78,8 @@ def main():
         #    np.savetxt(outfile,IR_drop,delimiter=',')
     template_distribution = 100*template_distribution/np.sum(template_distribution)
     with open("work/distribution.txt",'w') as outfile:
-        print("Percanetage distribution of templates:")
-        outfile.write("Percanetage distribution of templates:\n")
+        print("Percentage distribution of templates:")
+        outfile.write("Percentage distribution of templates:\n")
         for i,template_name in enumerate(settings_obj.template_names_list):
             print("  %10s : %4.2f "%(template_name,template_distribution[i]))
             outfile.write("  %10s : %4.2f\n"%(template_name,template_distribution[i]))

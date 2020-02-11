@@ -33,10 +33,6 @@ from template_construction import template_def
 from construct_eqn import construct_eqn
 import numpy as np
 from T6_PSI_settings import T6_PSI_settings
-
-
-import pytest
-import numpy as np
 import current_map_generator
 #@pytest.fixture
 

@@ -1,27 +1,31 @@
 SHELL = bash
 PC=python3
-DEF_FILE= /home/sachin00/chhab011/tmp/OpenROAD/src/OpeNPDN/test/aes/aes.def
-POW_FILE= ./data/power_instance.rpt
-#/home/sachin00/chhab011/tmp/OpenROAD/src/OpeNPDN/test/aes/aes.pwr.rpt
+## For multiple LEF files including cell LEF include with a space in quotes
 LEF_FILE= "./platforms/nangate45/NangateOpenCellLibrary.mod.lef"
+DEF_FILE= "./test/aes/aes.def"
+POW_FILE= "./test/aes/aes_pwr.rpt"
 CONGEST_RPT= ""
-ODB_LOC = "./build/modules/OpenDB/src/swig/python/opendbpy.py"
-#MODE = 'INFERENCE'
-MODE = 'TRAIN'
 CHECKPOINT_DIR = "./checkpoints"
+
+
+# Location of OpenDB python wrapper. Do not change if OpenDB built successful
+ODB_LOC = "./build/modules/OpenDB/src/swig/python/opendbpy.py"
+PDN_CFG = "./input/PDN.cfg"
+TOOL_CFG = "./input/tool_config.json"
+TECH_SPEC = "./input/tech_spec.json"
+CONGESTION_ENABLED = 0
 
 TERM_SHELL= $(shell echo "$$0")
 COMMAND =  $(shell source install.sh)
-.PHONY: work templates data 
-.SILENT: build all
+.PHONY: work templates data test
+.SILENT: build all test
 
-CONGESTION_ENABLED = 0
 
 ifeq (${CONGESTION_ENABLED}, 0)
-	CONGESTION_COMMAND = "no_congestion"
-	CONGEST_RPT = "congestion_report_invalid"
+CONGESTION_COMMAND = "no_congestion"
+CONGEST_RPT = "congestion_report_invalid"
 else
-	CONGESTION_COMMAND = ""
+CONGESTION_COMMAND = ""
 endif
 
 clean: work
@@ -33,16 +37,16 @@ work:
 	mkdir -p work/parallel_runs 
 
 settings:
-	$(PC) ./src/T6_PSI_settings.py ${ODB_LOC} ${CHECKPOINT_DIR} ${MODE} ${LEF_FILE} 
+	$(PC) ./src/T6_PSI_settings.py ${ODB_LOC} ${CHECKPOINT_DIR} ${LEF_FILE} ${PDN_CFG} ${TOOL_CFG} ${TECH_SPEC}
 
 maps:
 	mkdir -p input/current_maps &&\
 	$(PC) ./scripts/create_training_set.py 
 
 templates: 
-	$(PC) ./src/T6_PSI_settings.py ${ODB_LOC} ${CHECKPOINT_DIR} ${MODE} ${LEF_FILE} &&\
+	$(PC) ./src/T6_PSI_settings.py ${ODB_LOC} ${CHECKPOINT_DIR} ${LEF_FILE} ${PDN_CFG} ${TOOL_CFG} ${TECH_SPEC} &&\
 	mkdir -p templates
-	$(PC) ./src/create_template_new.py 
+	$(PC) ./src/create_template.py 
 
 parse_inputs:
 	$(PC) ./src/current_map_generator.py ${POW_FILE} ${LEF_FILE}  ${DEF_FILE} ${CONGESTION_COMMAND} ${CONGEST_RPT}
@@ -69,7 +73,7 @@ else
 	)
 endif
 
-build:
+build_OpeNPDN:
 	echo "****************************************************************" &&\
 	echo "****** Running scripts within PDN-opt virtual environment ******" &&\
 	echo "****************************************************************" &&\
@@ -91,18 +95,18 @@ all:
 	echo "****************************************************************" &&\
 	echo "************* Creating the defined templates *******************" &&\
 	echo "****************************************************************" &&\
-	$(PC) ./src/T6_PSI_settings.py ${ODB_LOC} ${CHECKPOINT_DIR} ${MODE} ${LEF_FILE} &&\
-	$(PC) ./src/create_template_new.py 
+	$(PC) ./src/T6_PSI_settings.py ${ODB_LOC} ${CHECKPOINT_DIR} ${LEF_FILE}  ${PDN_CFG} ${TOOL_CFG} ${TECH_SPEC} &&\
+	$(PC) ./src/create_template.py &&\
 	echo "****************************************************************" &&\
-	echo "************* Creating the maps for SA *************************" &&\
+	echo "**** Creating the maps for training data generation ************" &&\
 	echo "****************************************************************" &&\
 	$(PC) ./scripts/create_training_set.py &&\
 	echo "****************************************************************" &&\
-	echo "*** Running simulated annealing for training data collection ***" &&\
+	echo "******** Running golden data generation  ***********************" &&\
 	echo "****************************************************************" &&\
 	$(PC) ./src/generate_training_data_iterative.py ${CONGESTION_COMMAND} &&\
 	echo "****************************************************************" &&\
-	echo "***************** Simulated annealing completed ****************" &&\
+	echo "***************** Data generation completed ********************" &&\
 	echo "****************************************************************" &&\
 	echo "****************************************************************" &&\
 	echo "********* Beginning CNN training with the golden data **********" &&\
@@ -123,6 +127,7 @@ all:
 	echo "************* Running IR drop solver on the PDN ****************" &&\
 	echo "****************************************************************" &&\
 	$(PC) ./src/IR_map_generator.py
+
 training_set:
 	rm -rf ./work &&\
 	mkdir -p work &&\
@@ -130,12 +135,12 @@ training_set:
 	mkdir -p work/parallel_runs &&\
 	mkdir -p input/current_maps &&\
 	mkdir -p checkpoints &&\
-	$(PC) ./src/T6_PSI_settings.py ${ODB_LOC} ${CHECKPOINT_DIR} ${MODE} ${LEF_FILE} &&\
+	$(PC) ./src/T6_PSI_settings.py ${ODB_LOC} ${CHECKPOINT_DIR} ${LEF_FILE} ${PDN_CFG} ${TOOL_CFG} ${TECH_SPEC}  &&\
 	$(PC) ./scripts/create_training_set.py 
 	
 data:
-	$(PC) ./src/T6_PSI_settings.py ${ODB_LOC} ${CHECKPOINT_DIR} ${MODE} ${LEF_FILE} &&\
-	$(PC) ./src/create_template_new.py &&\
+	$(PC) ./src/T6_PSI_settings.py ${ODB_LOC} ${CHECKPOINT_DIR} ${LEF_FILE} ${PDN_CFG} ${TOOL_CFG} ${TECH_SPEC}  &&\
+	$(PC) ./src/create_template.py &&\
 	$(PC) ./src/generate_training_data_iterative.py ${CONGESTION_COMMAND}
 
 data_and_train:
@@ -145,9 +150,9 @@ data_and_train:
 	mkdir -p work/parallel_runs &&\
 	mkdir -p input/current_maps &&\
 	mkdir -p checkpoints &&\
-	$(PC) ./src/T6_PSI_settings.py ${ODB_LOC} ${CHECKPOINT_DIR} ${MODE} ${LEF_FILE} &&\
+	$(PC) ./src/T6_PSI_settings.py ${ODB_LOC} ${CHECKPOINT_DIR} ${LEF_FILE} ${PDN_CFG} ${TOOL_CFG} ${TECH_SPEC}  &&\
 	$(PC) ./scripts/create_training_set.py &&\
-	$(PC) ./src/create_template_new.py &&\
+	$(PC) ./src/create_template.py &&\
 	$(PC) ./src/generate_training_data_iterative.py ${CONGESTION_COMMAND} &&\
 	$(PC) ./src/cnn_train.py ${CONGESTION_COMMAND}
 
@@ -165,5 +170,62 @@ get_ir:
 	$(PC) ./src/current_map_generator.py ${POW_FILE} ${LEF_FILE}  ${DEF_FILE} ${CONGESTION_COMMAND} ${CONGEST_RPT} &&\
 	$(PC) ./src/IR_map_generator.py
 
+TEST_LEF_FILE= "./platforms/nangate45/NangateOpenCellLibrary.mod.lef"
+TEST_DEF_FILE= "./test/aes/aes.def"
+TEST_POW_FILE= "./test/aes/aes_pwr.rpt"
+TEST_PDN_CFG = "./test/PDN.cfg"
+TEST_TOOL_CFG = "./test/tool_config.json"
+TEST_TECH_SPEC = "./test/tech_spec.json"
+
 test:
-	pytest
+	rm -f ./test/aes.log &&\
+	touch ./test/aes.log &&\
+	rm -rf ./work ./templates &&\
+	mkdir -p work &&\
+	mkdir -p templates &&\
+	mkdir -p work/parallel_runs &&\
+	mkdir -p input/current_maps &&\
+	mkdir -p checkpoints &&\
+	echo "****************************************************************" &&\
+	echo "************* Creating the defined templates *******************" &&\
+	echo "****************************************************************" &&\
+	$(PC) ./src/T6_PSI_settings.py ${ODB_LOC} ${CHECKPOINT_DIR} ${TEST_LEF_FILE} ${TEST_PDN_CFG} ${TEST_TOOL_CFG} ${TEST_TECH_SPEC} | tee -a ./test/aes.log &&\
+	$(PC) ./src/create_template.py | tee -a ./test/aes.log &&\
+	echo "****************************************************************" &&\
+	echo "**** Creating the maps for training data generation ************" &&\
+	echo "****************************************************************" &&\
+	$(PC) ./scripts/create_training_set.py | tee -a ./test/aes.log &&\
+	echo "****************************************************************" &&\
+	echo "******** Running golden data generation  ***********************" &&\
+	echo "****************************************************************" &&\
+	$(PC) ./src/generate_training_data_iterative.py ${CONGESTION_COMMAND} &&\
+	echo "****************************************************************" &&\
+	echo "***************** Data generation completed ********************" &&\
+	echo "****************************************************************" &&\
+	echo "****************************************************************" &&\
+	echo "********* Beginning CNN training with the golden data **********" &&\
+	echo "****************************************************************" &&\
+	$(PC) ./src/cnn_train.py ${CONGESTION_COMMAND}   &&\
+	echo "****************************************************************" &&\
+	echo "************* Creating the testcase current map ****************" &&\
+	echo "****************************************************************" &&\
+	$(PC) ./src/current_map_generator.py ${TEST_POW_FILE} ${TEST_LEF_FILE}  ${TEST_DEF_FILE} ${CONGESTION_COMMAND} ${CONGEST_RPT} | tee -a ./test/aes.log  &&\
+	echo "****************************************************************" &&\
+	echo "***************** Using CNN to synthesize PDN ******************" &&\
+	echo "****************************************************************" &&\
+	$(PC) ./src/cnn_inference.py ${CONGESTION_COMMAND} | tee -a ./test/aes.log  &&\
+	echo "****************************************************************" &&\
+	echo "*** CNN-based PDN synthesized and stored in template_map.txt ***" &&\
+	echo "****************************************************************" &&\
+	echo "****************************************************************" &&\
+	echo "************* Running IR drop solver on the PDN ****************" &&\
+	echo "****************************************************************" &&\
+	$(PC) ./src/IR_map_generator.py | tee -a ./test/aes.log 
+	diff ./test/aes.log ./test/aes.ok
+	cmp -s ./test/aes.log ./test/aes.ok; \
+	RETVAL=$$?; \
+	if [ $$RETVAL -eq 0 ]; then \
+	        echo "TEST PASS"; \
+	else \
+	        echo "TEST FAIL"; \
+	fi

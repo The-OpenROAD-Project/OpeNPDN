@@ -1,0 +1,8 @@
+swig/python detected a memory leak of type 'std::vector< odb::dbLib *,std::allocator< odb::dbLib * > > *', no destructor found.
+Creating Template 0 
+Creating Template 1 
+Creating Template 2 
+Generating random current maps for training ML model
+Reading power report file 
+Number of cells without power = 0
+INFO: Saving optimized PDN in template_map.txt

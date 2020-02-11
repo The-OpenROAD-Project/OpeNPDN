@@ -1,83 +1,186 @@
-#BSD 3-Clause License
-#
-#Copyright (c) 2019, The Regents of the University of Minnesota
-#
-#All rights reserved.
-#
-#Redistribution and use in source and binary forms, with or without
-#modification, are permitted provided that the following conditions are met:
-#
-#* Redistributions of source code must retain the above copyright notice, this
-#  list of conditions and the following disclaimer.
-#
-#* Redistributions in binary form must reproduce the above copyright notice,
-#  this list of conditions and the following disclaimer in the documentation
-#  and/or other materials provided with the distribution.
-#
-#* Neither the name of the copyright holder nor the names of its
-#  contributors may be used to endorse or promote products derived from
-#  this software without specific prior written permission.
-#
-#THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-#AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-#IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-#DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-#FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-#DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-#SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-#CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-#OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-#OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Sun Dec 16 01:36:00 2018
-This script is the main function which calls the functions to create G matrices
-for all the possible templates and stores them. This ensures you do not have to
-create it on the fly for every iteration
-@author:Vidya A Chhabria
-"""
-
-import time
-import sys
-import os.path
+import bisect
+from scipy.sparse import dok_matrix
+from pprint import pprint
 import numpy as np
-import itertools
-from scipy import sparse
-from template_construction import template_def
 from T6_PSI_settings import T6_PSI_settings
+import pickle
+
+class node:
+    def __init__(self):
+        self.G_loc =0;
+        self.x = 0  
+        self.y = 0
+        self.l = 0
+        self.V = 0
+        self.J = 0
+    def set_G_loc(self,loc):
+        self.G_loc = loc
+    def get_G_loc(self):
+        return self.G_loc;
+    def set_loc(self,l,x,y):
+        self.x = x
+        self.y = y
+        self.l = l
+    def get_layer(self):
+        return self.l;
+    def get_loc(self):    
+        return (self.l,self.x,self.y)
+    def set_voltage(self,V):
+        self.V = V
+    def get_voltage(self):
+        return self.V
+    def set_current(self,J):
+        self.J = J
+    def add_current(self,J):
+        self.J = self.J+J
+    def get_current(self):
+        return self.J
+    def print(self):
+        print("Node num %d"%self.G_loc)
+        print("\t Location: x %d y %d layer %d "%(self.x,self.y,self.l))
+        print("\t Voltage: %f Current: %f "%(self.V,self.J))
+
+class template:
+    def __init__(self,num_layers):
+        self.num_nodes = 0;
+        self.num_layers = num_layers
+        self.node_map = {}
+        self.nodes = []
+        self.node_map_x = {}
+        self.node_map_y = {}
+        for n in range(0,num_layers):
+            self.node_map[n] = {}
+            self.node_map_x[n] = []
+            self.node_map_y[n] = []
+
+    def insert_node(self,layer,x,y):
+        if x in self.node_map[layer]:
+            if y in self.node_map[layer][x]:
+                return self.node_map[layer][x][y]
+        else:
+            self.node_map[layer][x] = {}        
+        node_h = node();
+        node_h.set_loc(layer,x,y)
+        node_h.set_G_loc(self.num_nodes)
+        self.node_map[layer][x][y] = node_h
+        self.nodes.append(node_h)
+        idx = bisect.bisect_left(self.node_map_x[layer],x)
+        if idx != len(self.node_map_x[layer]) and self.node_map_x[layer][idx] != x:
+            self.node_map_x[layer].insert(idx,x)
+        elif idx ==len(self.node_map_x[layer]) :
+            self.node_map_x[layer].append(x)
+        idx = bisect.bisect_left(self.node_map_y[layer],y)
+        if idx != len(self.node_map_y[layer]) and self.node_map_y[layer][idx] != y:
+            self.node_map_y[layer].insert(idx,y)
+        elif idx ==len(self.node_map_y[layer]) :
+            self.node_map_y[layer].append(y)
+        self.num_nodes = self.num_nodes+1
+        return node_h
+    
+    def get_node_from_loc(self,loc):
+        return self.nodes[loc]
+
+    def get_node(self,layer,x,y):
+        if layer != 0:     
+            if x in self.node_map[layer]:
+                if y in self.node_map[layer][x]:
+                    return self.node_map[layer][x][y]
+                else :
+                    print("Error node not found")
+                    return None
+            else:
+                print("Error node not found")
+                return None
+        else:
+            return self.get_nearest_node(layer,x,y)
+
+    def get_nearest_node(self,layer,x,y):
+        loc_x = self.get_nearest_loc(self.node_map_x[layer],x)
+        loc_y = self.get_nearest_loc(self.node_map_y[layer],y)
+        return self.node_map[layer][loc_x][loc_y]
 
 
-def main():
-    """ Main code which calls all the function to create the
-    G matrices for all tempaltes"""
-    start = time.time()
+    def get_nearest_loc(self, in_list,val):
+        
+        idx_l = bisect.bisect_left(in_list,val)
+        idx_r = bisect.bisect_right(in_list,val)
+        if idx_l == len(in_list):
+            return in_list[idx_l-1]
+        val_l = in_list[idx_l]
+        if val_l == val:
+            return val_l
+        elif idx_l != 0:
+            idx_l = idx_l-1
+            val_l = in_list[idx_l]
+        if idx_r == len(in_list):
+            return in_list[idx_l]
+        val_r = in_list[idx_r]
+        #print(val_l)
+        #print(val_r)
+        if abs(val- val_l) < abs(val-val_r):
+            loc = val_l
+        else:
+            loc = val_r
+        return loc
+    
+    def print(self):
+        print("template paramters:")
+        print("G matrix")
+        pprint(self.G_mat)
+        print("Nodes:")
+        for node in self.nodes:
+            node.print()
+        print("Nodes maps x and y:")
+        pprint(self.node_map_x)
+        pprint(self.node_map_y)
+    def initialize_G_mat(self):
+        if self.num_nodes == 0: 
+            print("ERROR no objects for initialization")
+        else: 
+            self.G_mat = dok_matrix((self.num_nodes, self.num_nodes), dtype=np.float64)
+        
+    def set_connection(self,node1,node2,cond):
+        node_l1 = node1.get_G_loc()
+        node_l2 = node2.get_G_loc()
+        cond11 = self.get_conductance(node_l1,node_l1)
+        cond12 = self.get_conductance(node_l1,node_l2)
+        cond21 = self.get_conductance(node_l2,node_l1)
+        cond22 = self.get_conductance(node_l2,node_l2)
+        #if(node_l1 == 1724 or node_l2 == 1724):
+        #    print(node_l1)
+        #    print(node_l2)
+        #    print("%f %f %f %f"%(cond11,cond12,cond21,cond22))
+        #    pprint(cond)
+
+        self.set_conductance(node_l1,node_l1,cond11+cond)
+        self.set_conductance(node_l2,node_l2,cond22+cond)
+        self.set_conductance(node_l1,node_l2,cond12-cond)
+        self.set_conductance(node_l2,node_l1,cond21-cond)
+        
+        #if(node_l1 == 1724 or node_l2 == 1724):
+        #    cond11 = self.get_conductance(node_l1,node_l1)
+        #    cond12 = self.get_conductance(node_l1,node_l2)
+        #    cond21 = self.get_conductance(node_l2,node_l1)
+        #    cond22 = self.get_conductance(node_l2,node_l2)
+        #    print(node_l1)
+        #    print(node_l2)
+        #    print("%f %f %f %f"%(cond11,cond12,cond21,cond22))
+        #    pprint(cond)
+
+
+    def get_conductance(self,row_idx,col_idx):
+        #TODO condition to check if out of bounds
+        return self.G_mat[row_idx,col_idx]
+    def set_conductance(self,row_idx,col_idx,cond):
+        #TODO condition to check if out of bounds
+        self.G_mat[row_idx,col_idx] = cond
+    def get_G_mat(self):
+        return self.G_mat
+
+def create_templates():
     settings_obj = T6_PSI_settings.load_obj()
-    template_list = define_templates(settings_obj, generate_g=1)
-    end = time.time()
-    print("Creation time:%4.3f"%(end - start))
-    dirname = settings_obj.template_file
-    fname = dirname + "/refined_template_list.txt" 
-    template_list_num = np.arange(len(template_list))
-    np.savetxt(fname,template_list_num,fmt='%d')
-
-    #print("\n")
-
-
-def define_templates(settings_obj, generate_g):
-    """ Solves the system of linear equations GV=J, to find V
-        This function uses sparse matrix solver with umfpack
-        Args:
-            settings_obj: A dictionay which represents information in both the
-            JSON files
-            generate_g: A flag variable which decides whether to gernerate all
-            the templates. Since this process is long, the flag is useful if the
-            templets are already generated
-        Returns:
-            template_list: A list of objects of class template_def.
-    """
+        
     width_values = []
     res_per_l = []
     via_res = []
@@ -96,7 +199,6 @@ def define_templates(settings_obj, generate_g):
     layer = settings_obj.TECH_LAYERS[0]
     via_res_1 = settings_obj.LAYERS[layer]['via_res']
 
-    #TODO handle for generic names
     # Create the template with multiple layers based on the combination of
     # pitches of layers in the JSON
     for l in range(1, settings_obj.NUM_LAYERS ):
@@ -108,7 +210,7 @@ def define_templates(settings_obj, generate_g):
             via_res_1 += float(
                 settings_obj.LAYERS[layer]['via_res'])
 
-    width_values = np.array(width_values)
+    width_values = np.round(np.array(width_values)*settings_obj.lef_unit)
     res_per_l = np.array(res_per_l)
     via_res = np.array(via_res)
     # Set dir = 1 for those layers in the PDN which are veritcal
@@ -126,29 +228,12 @@ def define_templates(settings_obj, generate_g):
         elif num_layer_pitches == 1:
             pitch_values[:, p] = layer_pitch[-1]
         else:
-            #if num_layer_pitches == settings_obj.NUM_TEMPLATES:
             template_layers.append(p)
-            #else:
-            #    print(
-            #        "ERROR: Layer %d does not have the corrent number of templates."
-            #        % p, "Please check the template_definition.json file")
-            #    sys.exit()
-    #ranges = [range(len(pitches[x])) for x in template_layers]
-    #template_num = 0
-    #for pitch_idx in itertools.product(*ranges):
-    #    print(pitch_idx)
-    #    if(template_num >= settings_obj.NUM_TEMPLATES):
-    #        print("ERROR: number of templates generated is greater than the number provided. Please check the template_definition.json file")
-    #        sys.exit()
-    #    for i in range(len(pitch_idx)):
-    #        pitch_values[template_num,template_layers[i]] = pitches[template_layers[i]][pitch_idx[i]]
-    #    template_num +=1
-
     for template_num in range(settings_obj.NUM_TEMPLATES):
         for p in template_layers:
             pitch_values[template_num, p] = pitches[p][template_num]
     template_num +=1
-
+    pitch_values= np.round(pitch_values*settings_obj.lef_unit)
     if template_num != settings_obj.NUM_TEMPLATES :
         print(template_num)
         print(
@@ -156,59 +241,174 @@ def define_templates(settings_obj, generate_g):
             "Please check the template_definition.json file")
         sys.exit()
     template_list = []
-    init_offset = np.zeros((pitch_values.shape[0], pitch_values.shape[1]))
+    #TODO make offsets
+    offsets = np.zeros((pitch_values.shape[0],pitch_values.shape[1]))*settings_obj.lef_unit
     # Call to the template definition which calls the function that creates G
+    #TODO temp 
+    LENGTH_REGION = settings_obj.LENGTH_REGION*settings_obj.lef_unit
+    WIDTH_REGION = settings_obj.WIDTH_REGION*settings_obj.lef_unit
     for temp_num, pitch_template in enumerate(pitch_values):
         template_obj = template_def(settings_obj.NUM_PDN_LAYERS, pitch_template,
-                                    width_values, rho_values, via_res, dirs,
-                                    settings_obj.LENGTH_REGION,
-                                    settings_obj.WIDTH_REGION)
-        init_offset[temp_num, :] = template_obj.init_offset.flatten()
-    max_offset = np.amax(init_offset, axis=0)
-
-    for temp_num, pitch_template in enumerate(pitch_values):
+                                    width_values, rho_values, via_res,
+                                    dirs,offsets[temp_num],
+                                    LENGTH_REGION,
+                                    WIDTH_REGION)
+        print("Creating Template %d " % temp_num)
+        template_list.append(template_obj)
         dirname = settings_obj.template_file
-        if not os.path.exists(dirname):
-            print("#########################################################")
-            print("CREATING TEMPLATE DIRECTORY")
-            print("#########################################################")
-        fname = dirname + "/template_obj_%d.npz" % temp_num
-        template_obj = template_def(settings_obj.NUM_PDN_LAYERS, pitch_template,
-                                    width_values, rho_values, via_res, dirs,
-                                    settings_obj.LENGTH_REGION,
-                                    settings_obj.WIDTH_REGION)
-        grid_arr = np.zeros(dirs.shape[0])
-        grid_arr[dirs == 0] = template_obj.ypitch
-        grid_arr[dirs == 1] = template_obj.xpitch
-        pitch_nodes = np.array(pitch_template) / grid_arr
-        init_offset[temp_num, init_offset[temp_num, :] ==
-                    0] = 1    # handle 0/0 condition
-        template_obj.offset = np.remainder(max_offset, pitch_nodes)
-        # generate g is a user flag which is one when properties of template
-        # change examples include
-        if generate_g == 1:
-            print("Creating Template %d " % temp_num)
-            template_obj.create_G()
-            template_list.append(template_obj)
-            G = sparse.dok_matrix.tocsc(template_obj.G)
-           # print("Shape of the matrix", G.get_shape())
-            with open(fname, 'wb') as config_dictionary_file:
-                sparse.save_npz(config_dictionary_file, G)
+        fname = dirname + "/template_obj_%d.pkl" % temp_num
+        with open(fname, 'wb') as template_file:
+            pickle.dump(template_obj, template_file)
+    return template_list
+
+#TODO will break if top two layers are not in oposite directions
+def template_def(num_layers,pitches,widths,rhos,via_res,dirs,offsets,LENGTH,WIDTH):
+    template_obj = template(num_layers)
+    #create the nodes
+    #layer 1
+    offset = np.round(offsets[0])
+    pitch = np.round(pitches[0])
+    x = offset
+    while(x<LENGTH):
+        y = offset
+        while(y<WIDTH):
+            template_obj.insert_node(0,x,y) 
+            y=y+pitch           
+        x = x+pitch
+
+    #layers 2 to end
+    for i in range(0,num_layers-1):
+        for k in range(i + 1, num_layers):
+            if not dirs[k] == dirs[i]:
+               break
+        if dirs[i] == 0:
+            offset_x = np.round(offsets[k])
+            offset_y = np.round(offsets[i])
+            pitch_x = np.round(pitches[k])
+            pitch_y = np.round(pitches[i])
         else:
-            if not os.path.isfile(fname):
-                print("######################################################")
-                print("TEMPLATE %d NOT FOUND. Run create_template.py" %
-                      temp_num)
-                print("######################################################")
-            else:
-                pass
-                #print("Loading Template %d from file. If you have" % temp_num,
-                #      "changed the json file ensure to run create_template.py")
-            with open(fname, 'rb') as config_dictionary_file:
-                G = sparse.load_npz(config_dictionary_file)
-            template_obj.G = G.todok()
+            offset_x = np.round(offsets[i])
+            offset_y = np.round(offsets[k])
+            pitch_x = np.round(pitches[i])
+            pitch_y = np.round(pitches[k])
+        x = offset_x
+        while(x<LENGTH):
+            y = offset_y
+            while(y<WIDTH):
+                if i != 0:
+                    template_obj.insert_node(i,x,y) 
+                template_obj.insert_node(k,x,y) 
+                y=y+pitch_y           
+            x = x+pitch_x
+            
+    #initialize G matrix after all nodes have been created
+    template_obj.initialize_G_mat()
+    #template_obj.print()
+    #create stripes
+    # layers stripes
+    for i in range(0,num_layers):
+        rho = rhos[i]
+        width = widths[i]
+        #print(dirs[i])
+        if dirs[i]==0:
+            for y in template_obj.node_map_y[i]:
+                for n_x, x in enumerate(template_obj.node_map_x[i]):
+                    if n_x != 0:
+                        x_prev = template_obj.node_map_x[i][n_x-1]
+                        node_1 = template_obj.get_node(i,x,y) 
+                        node_2 = template_obj.get_node(i,x_prev,y) 
+                        cond = rho * (x-x_prev) / width
+                        cond = 1/cond
+                        #if(node_1.get_G_loc() == 1724):
+                        #    print("hor")
+                        #    print(x)
+                        #    print(x_prev)
+                        #    print(y)
+                        #    print(node_1.get_loc())
+                        template_obj.set_connection(node_1,node_2,cond)
+        else:
+            for x in template_obj.node_map_x[i]:
+                for n_y, y in enumerate(template_obj.node_map_y[i]):
+                    if n_y != 0:
+                        y_prev = template_obj.node_map_y[i][n_y-1]
+                        node_1 = template_obj.get_node(i,x,y) 
+                        node_2 = template_obj.get_node(i,x,y_prev) 
+                        cond = rho * (y-y_prev) / width 
+                        cond = 1/cond
+                        #if(node_1.get_G_loc() == 1724):
+                        #    print("verty")
+                        #    print(x)
+                        #    print(y)
+                        #    print(y_prev)
+                        template_obj.set_connection(node_1,node_2,cond)
+    #vias  
+    for i in range(0,num_layers-1):
+        for k in range(i + 1, num_layers):
+            if not dirs[k] == dirs[i]:
+               break
+        res = via_res[i]
+        if dirs[i] == 0:
+            offset_x = offsets[k]
+            offset_y = offsets[i]
+            pitch_x = pitches[k]
+            pitch_y = pitches[i]
+        else:
+            offset_x = offsets[i]
+            offset_y = offsets[k]
+            pitch_x = pitches[i]
+            pitch_y = pitches[k]
+        x = offset_x
+        while(x<LENGTH):
+            y = offset_y
+            while(y<WIDTH):
+                #via reistance
+                node_1 = template_obj.get_node(i,x,y) 
+                node_2 = template_obj.get_node(i+1,x,y) 
+                cond_via = 1/res
+                template_obj.set_connection(node_1,node_2,cond_via)
+                y=y+pitch_y           
+            x = x+pitch_x
+    #template_obj.print()
+    return template_obj
+
+def load_templates():   
+    template_list = []
+    settings_obj = T6_PSI_settings.load_obj()
+    for temp_num in range(settings_obj.NUM_TEMPLATES):
+        #print("Loading Template %d " % temp_num)
+        dirname = settings_obj.template_file
+        fname = dirname + "/template_obj_%d.pkl" % temp_num
+        with open(fname, 'rb') as template_file:
+            template_obj = pickle.load(template_file)
             template_list.append(template_obj)
     return template_list
 
+def main():
+    #template_obj = template(5)
+    #node_1 = template_obj.insert_node(3,4,5)
+    #node_2 = template_obj.insert_node(2,3,4)
+    #template_obj.insert_node(1,2,3)
+    #template_obj.initialize_G_mat()
+    #template_obj.set_connection(node_1,node_2,5.6)
+    #template_obj.print()
+    create_templates()
+    #template_obj =     template_def(num_layers,pitches,widths,via_res,rhos,dirs,offsets,LENGTH,WIDTH):
+    #template_obj.print()
+
+    
 if __name__ == '__main__':
     main()
+
+#class irsolver():
+#    def __init__():
+#        read_C4_data()
+#        create_Gmat()
+#        create_J()
+#        add_C4_loc()
+    
+                
+         
+        
+
+    
+

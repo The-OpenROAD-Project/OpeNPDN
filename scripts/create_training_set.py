@@ -10,8 +10,6 @@ from scipy.stats import multivariate_normal
 import math
 settings_obj = T6_PSI_settings.load_obj();
 
-num_of_parallel = settings_obj.num_parallel_runs
-num_of_maps_per_run = settings_obj.num_per_run
 start_map    = settings_obj.start_maps
 num_maps  = settings_obj.num_maps
 chip_size_x = math.floor(settings_obj.current_map_num_regions*settings_obj.WIDTH_REGION*1e6)

@@ -179,8 +179,8 @@ def create_congest_map(settings_obj,congest_file,def_data):
     print('Reading congestion report file')
     congest_rep = {}
     res = def_data['units_per_micron']
-    width = int(settings_obj.WIDTH_REGION*settings_obj.NUM_REGIONS_X*1e6)
-    height = int(settings_obj.LENGTH_REGION*settings_obj.NUM_REGIONS_Y*1e6)
+    width = abs(die_area.xMax() - die_area.xMin())*unit_micron 
+    height= abs(die_area.yMax() - die_area.yMin())*unit_micron 
     congest_map = np.zeros((width * 10, height * 10))
     
     with open(congest_file) as f:
@@ -211,7 +211,6 @@ def create_congest_map(settings_obj,congest_file,def_data):
 
 
 def main():
-    print(len(sys.argv))
     if len(sys.argv) != 5 and len(sys.argv) != 6 :
         print("ERROR Insufficient arguments")
         print(
