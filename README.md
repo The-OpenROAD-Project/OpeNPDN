@@ -48,20 +48,25 @@ The packages in requirements.txt will be installed in a virtual environment duri
 ### Install on a bare-metal machine
 
 #### Clone repo and submodules
-`git clone --recursive https://github.com/VidyaChhabria/OpeNPDN.git`
+```
+git clone --recursive https://github.com/The-OpenROAD-Project/OpeNPDN.git
+git checkout rewrite_branch
+```
 
-#### Install
+#### Install OpenDB and test OpeNPDN
 ```
 cd OpeNPDN
+mkdir build
+cd build 
+cmake ..
+cd ..
 make clean
 source install.sh
-make build
 make test
 ```
-
+Ensure the test passes
 The installation creates a virtual environment with the necessary packages needed to run the flow.
 
-The build unzips CNN checkpoint to run the inference flow on a testcase. The test runs a set of unit tests.
 
 
 ## Usage
