@@ -15,7 +15,9 @@ This problem is solved as a classification problem using a convolution neural ne
 ## Machine Learning Flow for PDN Synthesis
 
 - Input definition:
-    * PDN templates defined in the [template_definition.json](input/template_definition.json) file 
+    * PDN templates defined in the [PDN.cfg](input/PDN.cfg) file 
+    * Technology specific information, region/template size in the [tech_spec.json](input/tech_spec.json) file 
+    * Certain tool specific parameters for training defined in the [tool_config.json](input/tool_config.json) file 
     * Placed DEF, path specified in the Makefile
     * Cell LEF, path specified in the Makefile
     * Instance based power report obtained from [OpenSTA](https://github.com/abk-openroad/OpenSTA) or Cadence Innovus Implementation System, path specified in the Makefile
@@ -74,15 +76,15 @@ This ML-based software has two parts to it:
 
 (1) Training flow 
 - This flow must be run only once for a new PDK or a new *region* size.
--  It involves a simulated annealing based optimization which generates the necessary data to train the
-      CNN. The optimization takes significantly long time to run. However, this is only a
-      one-time cost, since it must be performed only once for a given PDK. To help speed-up
-      this process, the training flow can be run in parallel depending on the number of CPUs 
-      availble on the system. The details of which are in the [tool_config.json](/input/tool_config.json) file. 
+-  It involves an enumerative based optimization which generates the necessary data to train the
+      CNN. This is only a
+      one-time cost, since it must be performed only once for a given PDK. The details of which are in the [tool_config.json](/input/tool_config.json) file. 
       Please refer to [tool_config](/doc/tool_config.md) for instructions on how to populate this
-      file.
+      file. The maximum current 
 - Steps to run:
-    - Define the details of the templates, for a given PDK and regions size, in [template_definition.json](input/template_definition.json) file. Please refer to the [template_definition.md](doc/template_definition.md) for instruction on how to populate this file
+    - Define the details of the templates, for a given PDK  in [PDN.cfg](input/PDN.cfg) file.
+    - Defin template size and per unit resistance and via resistance in [tech_spec.json](input/tech_spec.json) file
+    - Define the maximum current for a spcific PDK, in the [tool_config.json](input/tool_config.json) 
     - In the terminal:
 `make train`
 
@@ -151,3 +153,4 @@ The rest of this repository is licensed under BSD 3-Clause License.
 >CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 >OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 >OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
