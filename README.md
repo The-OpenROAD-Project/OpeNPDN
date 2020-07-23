@@ -52,15 +52,16 @@ The packages in requirements.txt will be installed in a virtual environment duri
 #### Clone repo and submodules
 ```
 git clone --recursive https://github.com/The-OpenROAD-Project/OpeNPDN.git
-git checkout rewrite_branch
 ```
 
 #### Install OpenDB and test OpeNPDN
 ```
 cd OpeNPDN
+git checkout rewrite_branch
 mkdir build
 cd build 
 cmake ..
+make
 cd ..
 make clean
 source install.sh
