@@ -57,7 +57,7 @@ git clone --recursive https://github.com/The-OpenROAD-Project/OpeNPDN.git
 #### Install OpenDB and test OpeNPDN
 ```
 cd OpeNPDN
-git checkout rewrite_branch
+git checkout standalone
 mkdir build
 cd build 
 cmake ..
