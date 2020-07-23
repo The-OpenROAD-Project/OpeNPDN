@@ -43,6 +43,7 @@ The training data generation is a one-time step which involves running a simulat
 - python 3.6
 - pip 18.1
 - python3-venv
+- swig 3.0 (OpenDB interface)
 
 Additionally, please refer to [requirements.txt](requirements.txt) file in this repository. 
 The packages in requirements.txt will be installed in a virtual environment during build.
