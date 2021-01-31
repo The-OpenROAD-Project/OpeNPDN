@@ -1,7 +1,7 @@
-# OpeNPDN: Neural networks for automated synthesis of Power Delivery Networks (PDN)
-[![Standard](https://img.shields.io/badge/python-3.6-blue)](https://commons.wikimedia.org/wiki/File:Blue_Python_3.6_Shield_Badge.svg)
+# OpeNPDN: Neural-network-based framework for Power Delivery Networks (PDN) Synthesis
+[![Standard](https://img.shields.io/badge/python-3.6-blue)](https://commons.wikimedia.org/wiki/File:Blue_Python_3.7_Shield_Badge.svg)
 [![Download](https://img.shields.io/badge/Download-here-red)](https://github.com/The-OpenROAD-Project/OpeNPDN/archive/master.zip)
-[![Version](https://img.shields.io/badge/version-0.1-green)](https://github.com/The-OpenROAD-Project/OpeNPDN/tree/master)
+[![Version](https://img.shields.io/badge/version-1.0-green)](https://github.com/The-OpenROAD-Project/OpeNPDN/tree/master)
 [![AskMe](https://img.shields.io/badge/ask-me-yellow)](https://github.com/The-OpenROAD-Project/OpeNPDN/issues)
 [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 
