@@ -6,11 +6,15 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm, trange
 import scipy
 import os
+from CNN import Net, OpeNPDNDataset
+import torch
+from torch.utils.data import Dataset, DataLoader
+from torchsummary import summary
 
-def inference(grid_params_file,
-      tl_chk_pt,
+def inference(tl_chk_pt,
       syn_chk_pt,
       log_level,
+      grid_params_file,
       data_dir,
       logger_file=None):
   global logger_h
@@ -18,32 +22,77 @@ def inference(grid_params_file,
   plot_maps = logger_h.getEffectiveLevel()<=logging.DEBUG
 
   logger_h.info("Starting TL data generation.")
-  set_globals(grid_params_file, ir_params_file)
+  set_globals(grid_params_file)
   logger_h.info("Loaded global parameters:")
   logger_h.info("  Grid parameters: %s"%grid_params_file)
-  logger_h.info("  IR solver parameters: %s"%ir_params_file)
-  logger_h.info("  Templates: %s"%template_file)
   logger_h.debug("Loaded json value:%d"%grid_params['size_x'])
-  logger_h.info("Generating the input data.")
+  logger_h.info("Loading the input data.")
   #'bp' 32
-  designs =\
-  ['aes','ibex','jpeg','dynamic_node','bp_fe','bp_be','bp_multi','swerv']
-  cur_scale =\
-  [   15,    10,    10,            15,     30,     35,        15,   12.5]
-  inf_data = load_data('./designs', designs, cur_scale,plot_maps)
+  designs =['aes']
+  #\
+  #['aes','ibex','jpeg','dynamic_node','bp_fe','bp_be','bp_multi','swerv']
+  cur_scale =[   15 ]
+  #\
+  #[   15,    10,    10,            15,     30,     35,        15,   12.5]
+  inf_data = load_data(data_dir, designs, cur_scale,plot_maps)
   #current_maps, current_maps_dok, signal_congestion = generate_maps(plot= plot_maps)
   logger_h.info("Running Inference.")
   TL_dataset = OpeNPDNDataset(list(inf_data.values()), 
                               labels_present=False,
                               normalize=False)
   TL_dataset.load_normalize(os.path.dirname(syn_chk_pt), True)
-  set_global_hyperparams()
-  TL_model = train_loop(TL_dataset, syn_chk_pt, plot_data)
+  result = evaluate(TL_dataset, syn_chk_pt)
+  
+  if plot_maps:
+    res_num = 0 
+    current_map = np.loadtxt('%s/%s/current.csv'%(data_dir,designs[0]),delimiter=',')
+    num_x,mod_x = divmod(current_map.shape[-2],region_size)
+    num_y,mod_y = divmod(current_map.shape[-1],region_size)
+    if mod_x>region_size/2:
+        num_x+=1
+    if mod_y>region_size/2:
+        num_y+=1
+    plt.figure()
+    plt.imshow(current_map.T,cmap='jet',origin='lower' )
+    for x in range(1,num_x+1):
+      plt.axvline(x=x*region_size,color='r')
+    for y in range(1,num_y+1):
+      plt.axhline(y=y*region_size,color='r')    
+    for x in range(num_x):
+      for y in range(num_y):
+        plt.text(x*region_size + region_size/3, 
+                 y*region_size + region_size/3,
+                 "%d"%result[res_num],
+                 fontsize=30)  
+        res_num+=1
+    plt.colorbar()
 
 
 
   if plot_maps:
     plt.show()
+
+def evaluate(dataset, synth_chk_pt):
+  batch_size = 1 
+  device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+  dataloader = torch.utils.data.DataLoader(dataset, 
+                              batch_size=batch_size,
+                              shuffle=False)
+  net = torch.load(synth_chk_pt)
+  if  logger_h.getEffectiveLevel() <= logging.DEBUG :
+    net.to(torch.device("cpu"))
+    summary(net, input_size=(4,)+dataset.current_maps.shape[1:],device="cpu")
+  net.to(device)
+  inner_loop = tqdm(desc='Batches',unit='batch',total=len(dataloader),position=0) 
+  predicted_results = []
+  with torch.no_grad():
+    for step, data in enumerate(dataloader):
+      inputs = data[0].to(device)
+      outputs = (net.eval())(inputs)               
+      _, predicted = torch.max(outputs, 1)
+      inner_loop.update(1)
+      predicted_results.extend(predicted)
+  return predicted_results
 
 def load_data(data_dir, designs, cur_scale, plot):
   inf_data ={}
@@ -64,7 +113,6 @@ def load_data(data_dir, designs, cur_scale, plot):
     if mod_y>region_size/2:
         num_y+=1
     logger_h.debug("Design: %s x:%d y:%d"%(cur_design,num_x,num_y))
-    start,end = end, end + num_x*num_y
     if plot and n==0:
       plt.figure()
       plt.imshow(current_map.T,cmap='jet')
@@ -105,8 +153,11 @@ def load_data(data_dir, designs, cur_scale, plot):
                         uy * grid_params['unit_micron'])
         regions.append(((lx,ux),(ly,uy)))
 
-    inf_data[cur_design] = (current_maps, cong_maps, 
-                            macro_maps, eff_dist_maps)
+    inf_data[cur_design] = {}
+    inf_data[cur_design]['current_maps'] = current_maps
+    inf_data[cur_design]['congestion_maps'] = cong_maps
+    inf_data[cur_design]['macro_maps'] = macro_maps
+    inf_data[cur_design]['eff_dist_maps'] = eff_dist_maps
   return inf_data
 
 def process_maps(
@@ -194,5 +245,61 @@ def load_congestion(design, data_dir):
   logger_h.debug("Loading congestion file :%s"%fname)
   return np.loadtxt(fname,
         delimiter=',')
+def create_logger(log_level, log_file=None):
+  # Create a custom logger
+  logger = logging.getLogger("INFR")
+  logger.setLevel(log_level)
+  
+  c_handler = logging.StreamHandler()
+  c_handler.setLevel(log_level)
+  
+  # Create formatters and add it to handlers
+  c_format = logging.Formatter('[%(name)s][%(levelname)s][%(message)s]')
+  c_handler.setFormatter(c_format)
+  
+  # Add handlers to the logger
+  logger.addHandler(c_handler)
+
+  # Process only if log file defined
+  if log_file is not None:
+    f_handler = logging.FileHandler(log_file)
+    f_handler.setLevel(logging.WARNING)
+    f_format = logging.Formatter('[%(asctime)s][%(name)s][%(levelname)s][%(message)s]')
+    f_handler.setFormatter(f_format)
+    logger.addHandler(f_handler)
+  return logger
+def set_globals(grid_params_file):
+  global grid_params
+  global region_size
+
+  with open(grid_params_file) as f:
+    grid_params= json.load(f)
+  region_size =100
+def extract_region(all_maps, region_size,x,y):    
+  op_maps = np.zeros((all_maps.shape[0],3*region_size,3*region_size))
+  lx = max((x-1)*region_size, 0)
+  rlx = max(0, lx - (x-1)*region_size)
+  ux = min((x+2)*region_size, all_maps.shape[-2])
+  rux = region_size + min( 2*region_size, 2*region_size + ux-(x+2)*region_size )
+  ly = max((y-1)*region_size, 0)
+  rly = max(0, ly - (y-1)*region_size)
+  uy = min((y+2)*region_size, all_maps.shape[-1])
+  ruy = region_size + min( 2*region_size, 2*region_size + uy-(y+2)*region_size)
+  op_maps[:,rlx:rux,rly:ruy] = all_maps[:,lx:ux,ly:uy]
+      
+  return op_maps
 
 
+
+if __name__ == '__main__':
+  log_level = logging.DEBUG
+  #log_level = logging.INFO
+  data_dir = "./designs"
+  syn_chk_pt = "./run/checkpoint/synth_CNN.ckp"
+  tl_chk_pt = "./run/checkpoint/TL_CNN.ckp"
+  grid_params_file = "./params/grid_params.json"
+  inference(tl_chk_pt,
+      syn_chk_pt,
+      log_level,
+      grid_params_file,
+      data_dir)

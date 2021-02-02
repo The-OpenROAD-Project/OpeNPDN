@@ -93,7 +93,7 @@ class OpeNPDNDataset(Dataset):
     if self.labels_present:
       Y = torch.tensor(self.labels[idx])
     else:
-      Y = None
+      Y = torch.empty((1,)+self.current_maps.shape[1:-2])
     return (X,Y)
 
 

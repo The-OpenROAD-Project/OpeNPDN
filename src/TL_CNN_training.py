@@ -1,14 +1,14 @@
 import torch
-from tqdm import trange, tqdm
-import logging
-import numpy as np
-import matplotlib.pyplot as plt
 from torch.utils.data import Dataset, DataLoader
-from CNN import Net, OpeNPDNDataset
 from torchsummary import summary
 import torch.optim as optim
 import torch.nn as nn
 import os
+from tqdm import trange, tqdm
+import logging
+import numpy as np
+import matplotlib.pyplot as plt
+from CNN import Net, OpeNPDNDataset
 from glob import glob
 import re
 

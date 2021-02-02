@@ -126,7 +126,7 @@ The rest of this repository is licensed under BSD 3-Clause License.
 
 >BSD 3-Clause License
 >
->Copyright (c) 2019, The Regents of the University of Minnesota
+>Copyright (c) 2021, The Regents of the University of Minnesota
 >
 >All rights reserved.
 >
@@ -154,4 +154,17 @@ The rest of this repository is licensed under BSD 3-Clause License.
 >CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 >OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 >OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+## Commands
+
+Create directories: run, run/checkpoint, run/data, run/TL_data
+
+python3 src/template_elimination.py
+python3 src/synthetic_data_gen.py
+python3 src/CNN_synth_training.py
+python3 src/TL_data_gen.py
+python3 src/TL_CNN_training.py
+python3 src/inference.py
+
 
