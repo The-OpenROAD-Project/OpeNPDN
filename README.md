@@ -18,7 +18,7 @@ This problem is solved as a classification problem using a convolution neural ne
 - Inference and training:
   * Input definition:
     * PDN templates defined by a combination of numbers defined in [templates.csv](params/templates.csv) and [grid parameters](params/grid_params.json) file
-    * Current maps: A 2D distribution of current across the chip specified on a per-region basis as shown in [current map](designs/aes/current_maps.csv). 
+    * Current maps: A 2D distribution of current across the chip specified on a per-region basis as shown in [current map](designs/aes/current_map.csv). 
     * Congestion maps: A 2D distribution of congestion across the chip specified on a per-region basis in the same format as the current map.
     * Macro maps: A specification of lower left and upper right corners of all macros in the design as specified by [macros.txt](designs/bp_be/macro.txt)
     * Power bump distribution file: A specification of the x and y coordinates of the power bump location with its voltage source value [vsrc.txt](designs/bp_be/vsrc.txt)
